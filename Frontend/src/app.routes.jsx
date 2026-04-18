@@ -1,14 +1,23 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter } from "react-router-dom";
+// import Home from "./Home";
 import Login from "./features/auth/pages/Login";
 import Register from "./features/auth/pages/Register";
 
 export const router = createBrowserRouter([
   {
+    path: "/",
+    element: <h1>Home</h1>,
+  },
+  {
     path: "/login",
-    element: <Login />
+    element: <Login />,
   },
   {
     path: "/register",
-    element: <Register />
-  }
+    element: <Register />,
+  },
+  {
+    path: "*",
+    element: <h1>404 Page Not Found</h1>,
+  },
 ]);
