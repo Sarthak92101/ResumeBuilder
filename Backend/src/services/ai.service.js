@@ -1,44 +1,131 @@
-const {GoogleGenAI, Behavior}=require("@google/genai")
-const {z}=require("zod")
-const {zodTojsonSchema}=require("zod-to-json-schema") 
-const { selfDescription } = require("./temp")
-const ai=new GoogleGenAI({
-  apiKey:process.env.GOOGLE_API_KEY 
-})
+const { GoogleGenAI } = require("@google/genai");
+const { z } = require("zod");
+const { zodToJsonSchema } = require("zod-to-json-schema");
 
-const interviewReportSchema=z.object({
-  matchScore:z.number().description("A score between 0 to 100 indicating the match between the resume and the job description. "), 
-  technicalQuestions:z.array(z.object({
-    question:z.string().description("The technical question can be asked in the interview. "),
-    intention:z.string().description("The intention of the question"),
-    answer:z.string().description("How to answer the question,what points to cover in the answer,what approch to use  ") 
-  })).description("The technical questions can be asked in the interview. "),
-  BehaviouralQuestions:z.array(z.object({
-    question:z.string().description("The behavioural question can be asked in the interview. "),
-    intention:z.string().description("The intention of the question"),
-    answer:z.string().description("How to answer the question,what points to cover in the answer,what approch to use  ") 
-  })).description("The behavioural questions can be asked in the interview. "),
-  skillGaps:z.array(z.object({
-    skill:z.string().description("The skill gap can be asked in the interview. "),
-    severity:z.string().description("The severity of the skill gap can be asked in the interview. ")
-  })).description("list of skill gaps in the candidate's profile along with their severity."),
-  preparationPlan:z.array(z.object({
-    day:z.number().description("The day of the preparation plan can be asked in the interview. "),
-    focus:z.string().description("The focus of the preparation plan can be asked in the interview. "),
-    tasks:z.array(z.string().description("The tasks of the preparation plan can be asked in the interview. "))
-  })).description("A day wise preparation plan for the candidate to follow.  "),
-})
-   
+const ai = new GoogleGenAI({
+  apiKey: process.env.GOOGLE_API_KEY,
+});
 
-async function generateInterviewReport({resume,selfDescription,jobDescription}){ 
-const response=await ai.model.generateContent({
-  model:"gemini-2.5-flash",
-  contents:"",
-  config:{
-    responseMimeType:"application/json",
-    responseJsonSchema:zodTojsonSchema(interviewReportSchema) 
+const interviewReportSchema = z.object({
+  matchScore: z
+    .number()
+    .describe(
+      "A score between 0 to 100 indicating the match between the resume and the job description."
+    ),
+
+  technicalQuestions: z
+    .array(
+      z.object({
+        question: z
+          .string()
+          .describe("Technical interview question."),
+
+        intention: z
+          .string()
+          .describe("Purpose of asking this question."),
+
+        answer: z
+          .string()
+          .describe(
+            "How to answer the question, key points to cover, and the approach to use."
+          ),
+      })
+    )
+    .describe("List of technical interview questions."),
+
+  behaviouralQuestions: z
+    .array(
+      z.object({
+        question: z
+          .string()
+          .describe("Behavioural interview question."),
+
+        intention: z
+          .string()
+          .describe("Purpose of asking this question."),
+
+        answer: z
+          .string()
+          .describe(
+            "How to answer the question, key points to cover, and the approach to use."
+          ),
+      })
+    )
+    .describe("List of behavioural interview questions."),
+
+  skillGaps: z
+    .array(
+      z.object({
+        skill: z
+          .string()
+          .describe("Missing or weak skill."),
+
+        severity: z
+          .string()
+          .describe("Severity level of the skill gap."),
+      })
+    )
+    .describe(
+      "List of skill gaps in the candidate profile along with severity."
+    ),
+
+  preparationPlan: z
+    .array(
+      z.object({
+        day: z
+          .number()
+          .describe("Day number in preparation plan."),
+
+        focus: z
+          .string()
+          .describe("Main focus area for the day."),
+
+        tasks: z
+          .array(z.string())
+          .describe("Tasks to complete on that day."),
+      })
+    )
+    .describe("Day-wise preparation plan."),
+});
+
+async function generateInterviewReport({
+  resume,
+  selfDescription,
+  jobDescription,
+}) {
+  try {
+    const prompt = `
+Generate a detailed interview preparation report for the candidate.
+
+Resume:
+${resume}
+
+Self Description:
+${selfDescription}
+
+Job Description:
+${jobDescription}
+`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+
+      contents: prompt,
+
+      config: {
+        responseMimeType: "application/json",
+
+        responseSchema:
+          zodToJsonSchema(interviewReportSchema),
+      },
+    });
+
+return JSON.parse (response.text) ;
+
+  } catch (error) {
+    console.log("AI Service Error:", error);
+    throw error;
   }
-})
 }
 
-module.exports= invokeGeminiAi
+module.exports = generateInterviewReport;
