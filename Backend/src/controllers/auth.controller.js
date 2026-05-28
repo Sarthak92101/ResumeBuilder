@@ -59,11 +59,18 @@ async function registerUserController(req, res) {
 
 async function loginUserController(req, res) {
   const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({
+      message: "Please provide email and password"
+    })
+  }
+
   const user = await userModel.findOne({ email })
 
   if (!user) {
     return res.status(400).json({
-      message: "Invalid user or password "
+      message: "Invalid user or password"
     })
   }
 

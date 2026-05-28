@@ -4,7 +4,7 @@ const interviewController = require('../controllers/interview.controller');
 const upload=require("../middlewares/file.middleware")
 
 const interviewRouter = express.Router();
-const router = Express.Router();  
+const router = express.Router();  
 
 /**
  * @Route POST /api/interview/

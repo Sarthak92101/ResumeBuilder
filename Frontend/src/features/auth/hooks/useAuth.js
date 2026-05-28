@@ -12,17 +12,15 @@ export const useAuth = () => {
     try {
       const data = await login({ email, password });
 
+      if (!data?.user) {
+        throw new Error("Login failed");
+      }
+
       setUser(data.user);
-
-      // ✅ ADDED: return true on success
       return true;
-
     } catch (err) {
-      console.log(err);
-
-      // ✅ ADDED: return false on failure
+      console.error("Login failed:", err);
       return false;
-
     } finally {
       setLoading(false);
     }

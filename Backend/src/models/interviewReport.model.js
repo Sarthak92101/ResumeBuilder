@@ -120,11 +120,10 @@ const interviewReportSchema = new mongoose.Schema({
   preparationPlan: [preparationPlanSchema],
   user:{
     type:mongoose.Schema.Types.ObjectId,
-    ref:"users"
+    ref:"user",
   }
 }, {
   timestamps: true
 })
 
-const interviewReportModel = mongoose.model("interviewReport", interviewRepostSchema)
 module.exports = mongoose.model("interviewReport", interviewReportSchema)

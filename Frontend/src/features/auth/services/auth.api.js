@@ -26,7 +26,11 @@ export async function login({ email, password }) {
     });
     return response.data;
   } catch (err) {
-    console.log(err);
+    console.error("Login API error:", err);
+    if (err.response?.data) {
+      throw err.response.data;
+    }
+    throw err;
   }
 }
 
