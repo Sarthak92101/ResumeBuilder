@@ -86,6 +86,8 @@ const interviewReportSchema = z.object({
       })
     )
     .describe("Day-wise preparation plan."),
+    title:z
+    .string().describe("Title of the job for which the  interview report generated."),
 });
 
 async function generateInterviewReport({
@@ -120,7 +122,7 @@ ${jobDescription}
       },
     });
 
-return JSON.parse (response.text) ;
+    return JSON.parse(response.text);
 
   } catch (error) {
     console.log("AI Service Error:", error);
