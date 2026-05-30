@@ -1,19 +1,16 @@
-// ── Shared Variables ──────────────────────────────────────────────────────────
-$bg-page: #0d1117;
-$bg-card: #161b22;
-$bg-panel: #1c2230;
-$bg-input: #1e2535;
-$border-color: #2a3348;
-$text-primary: #e6edf3;
-$text-muted: #7d8590;
-$accent: #ff2d78;
-$font-stack: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-
-$severity-high: #ff4d4d;
-$severity-medium: #f5a623;
-$severity-low: #3fb950;
+@use "../../../styles/theme" as *;
 
 *::-webkit-scrollbar { display: none; }
+
+.interview-page-wrap {
+    width: 100%;
+    min-height: 100vh;
+    padding: 1.5rem;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
 
 // ── Page Shell ────────────────────────────────────────────────────────────────
 .interview-page {
@@ -24,7 +21,8 @@ $severity-low: #3fb950;
     font-family: $font-stack;
     display: flex;
     align-items: stretch;
-    padding: 1.5rem;
+    width: 100%;
+    max-width: 1280px;
     box-sizing: border-box;
 }
 
@@ -36,7 +34,8 @@ $severity-low: #3fb950;
     margin: 0 auto;
     background-color: $bg-card;
     border: 1px solid $border-color;
-    border-radius: 1rem;
+    border-radius: $radius-lg;
+    box-shadow: $shadow-card;
     justify-content: space-between;
 }
 
@@ -108,26 +107,36 @@ $severity-low: #3fb950;
         flex-shrink: 0;
     }
 
-    &__download {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        width: 100%;
-        padding: 0.65rem 1rem;
-        background: rgba($accent, 0.08);
-        border: 1px solid rgba($accent, 0.2);
-        border-radius: 0.5rem;
-        color: $accent;
-        font-family: $font-stack;
-        font-size: 0.82rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background-color 0.15s;
+    &__downloads {
         margin-top: auto;
+        padding-top: 1rem;
+        border-top: 1px solid $border-color;
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+    }
 
-        &:hover {
-            background: rgba($accent, 0.15);
+    &__downloads-label {
+        font-size: 0.65rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: $text-muted;
+        text-align: center;
+    }
+
+    &__download-row {
+        display: flex;
+        flex-direction: row;
+        gap: 0.45rem;
+        width: 100%;
+
+        .button {
+            flex: 1;
+            min-width: 0;
+            font-size: 0.7rem;
+            padding: 0.5rem 0.4rem;
+            line-height: 1.2;
         }
     }
 }
@@ -182,7 +191,7 @@ $severity-low: #3fb950;
     overflow: hidden;
     transition: border-color 0.2s;
 
-    &:hover { border-color: lighten($border-color, 10%); }
+    &:hover { border-color: $border-focus; }
 
     &__header {
         display: flex;
@@ -248,7 +257,7 @@ $severity-low: #3fb950;
         p {
             margin: 0;
             font-size: 0.835rem;
-            color: lighten($text-muted, 15%);
+            color: $text-primary;
             line-height: 1.65;
         }
     }
@@ -352,7 +361,7 @@ $severity-low: #3fb950;
             align-items: flex-start;
             gap: 0.5rem;
             font-size: 0.845rem;
-            color: lighten($text-muted, 12%);
+            color: $text-muted;
             line-height: 1.5;
         }
     }

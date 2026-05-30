@@ -1,38 +1,34 @@
-// ── Variables ────────────────────────────────────────────────────────────────
-$bg-page:        #0d1117;
-$bg-card:        #161b22;
-$bg-panel:       #1c2230;
-$bg-input:       #1e2535;
-$border-color:   #2a3348;
-$text-primary:   #e6edf3;
-$text-muted:     #7d8590;
-$accent:         #ff2d78;
-$accent-alt:     #ff6b9d;
-$badge-required: #ff2d78;
-$badge-best:     #ff2d78;
-$info-bg:        #1b2a4a;
-$info-border:    #2d4a7a;
-$font-stack:     system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+@use "../../../styles/theme" as *;
+
+$badge-required: $accent;
+$badge-best: $accent-secondary;
 
 // ── Page Shell ───────────────────────────────────────────────────────────────
 .home-page {
     width: 100%;
     min-height: 100vh;
-    background-color: $bg-page;
     color: $text-primary;
     font-family: $font-stack;
 
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 3rem 1.5rem;
+    padding: 1.5rem 1.5rem 3rem;
     gap: 2rem;
 }
 
 // ── Page Header ──────────────────────────────────────────────────────────────
 .page-header {
     text-align: center;
+
+    &__brand {
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: $accent-light;
+        margin-bottom: 0.75rem;
+    }
 
     h1 {
         font-size: 2.25rem;
@@ -60,7 +56,8 @@ $font-stack:     system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Robot
     max-width: 900px;
     background-color: $bg-card;
     border: 1px solid $border-color;
-    border-radius: 1rem;
+    border-radius: $radius-lg;
+    box-shadow: $shadow-card;
     overflow: hidden;
 
     &__body {
@@ -175,7 +172,7 @@ $font-stack:     system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Robot
 
             .progress-fill {
                 height: 100%;
-                background: linear-gradient(90deg, $accent, $accent-alt);
+                background: linear-gradient(90deg, $accent, $accent-secondary);
                 border-radius: 2px;
                 transition: width 0.2s;
             }
@@ -333,14 +330,14 @@ $font-stack:     system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Robot
 
     &__icon {
         flex-shrink: 0;
-        color: #4a90e2;
+        color: $accent-secondary;
         margin-top: 1px;
     }
 
     p {
         margin: 0;
         font-size: 0.8rem;
-        color: #8ab4f8;
+        color: $info-text;
         line-height: 1.5;
 
         strong {
@@ -355,7 +352,7 @@ $font-stack:     system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Robot
     align-items: center;
     gap: 0.5rem;
     padding: 0.75rem 1.5rem;
-    background: linear-gradient(135deg, $accent 0%, darken($accent, 10%) 100%);
+    background: $gradient-brand;
     color: #fff;
     font-size: 0.9rem;
     font-weight: 600;
@@ -383,7 +380,8 @@ $font-stack:     system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Robot
     &:disabled {
         opacity: 0.5;
         cursor: not-allowed;
-        background: linear-gradient(135deg, $text-muted 0%, darken($text-muted, 10%) 100%);
+        background: $bg-panel;
+        color: $text-muted;
     }
 
     svg {

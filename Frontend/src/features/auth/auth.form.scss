@@ -1,42 +1,209 @@
-main {
+@use "../../styles/theme" as *;
+
+.auth-page {
   min-height: 100vh;
-  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.auth-about {
+  position: relative;
+  padding: 3rem 2.5rem;
+  background: $bg-card;
+  border-right: 1px solid $border-color;
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: $gradient-hero;
+    pointer-events: none;
+  }
+
+  @media (max-width: 900px) {
+    border-right: none;
+    border-bottom: 1px solid $border-color;
+    padding: 2rem 1.5rem;
+  }
+
+  &__inner {
+    position: relative;
+    z-index: 1;
+    max-width: 420px;
+  }
+
+  &__name {
+    font-size: clamp(2rem, 4vw, 2.5rem);
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 0.5rem;
+    background: $gradient-brand;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  &__role {
+    font-size: 0.95rem;
+    color: $accent-light;
+    font-weight: 600;
+    margin-bottom: 1.25rem;
+  }
+
+  &__bio {
+    font-size: 0.92rem;
+    color: $text-muted;
+    line-height: 1.7;
+    margin-bottom: 1.5rem;
+  }
+
+  &__links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    margin-bottom: 1.5rem;
+  }
+
+  &__link {
+    display: block;
+    padding: 0.75rem 1rem;
+    border-radius: $radius-md;
+    background: rgba(139, 92, 246, 0.1);
+    border: 1px solid rgba(139, 92, 246, 0.28);
+    color: $accent-light;
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 600;
+    transition: background 0.2s, border-color 0.2s;
+
+    &:hover {
+      background: rgba(139, 92, 246, 0.18);
+      border-color: $accent-light;
+      color: $text-primary;
+    }
+  }
+
+  &__more {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: $accent-secondary;
+    text-decoration: none;
+
+    &:hover {
+      color: $accent-light;
+    }
+  }
+}
+
+.auth-form-side {
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+}
 
+.auth-form-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 2rem;
+  background: $bg-glass;
+  border: 1px solid $border-color;
+  border-radius: $radius-xl;
+  box-shadow: $shadow-card, $shadow-glow;
+  backdrop-filter: blur(16px);
 
-  .form-container {
-    min-width: 350px;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem
+  &__head {
+    margin-bottom: 1.5rem;
+
+    h2 {
+      font-size: 1.65rem;
+      font-weight: 800;
+      margin-bottom: 0.35rem;
+      color: $text-primary;
+    }
+
+    p {
+      font-size: 0.9rem;
+      color: $text-muted;
+      line-height: 1.5;
+    }
   }
+}
 
-  form {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem
-  }
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
 
-  .input-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+
+  label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: $text-muted;
+    letter-spacing: 0.02em;
   }
 
   input {
-    border: none;
+    border: 1px solid $border-color;
+    background: $bg-input;
+    color: $text-primary;
     outline: none;
-    padding-inline: 1rem;
-    padding-block: 0.5rem;
-    border-radius: 0.5rem;
+    padding: 0.7rem 1rem;
+    border-radius: $radius-md;
+    font-family: $font-stack;
+    font-size: 0.92rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
 
+    &::placeholder {
+      color: $text-soft;
+    }
+
+    &:focus {
+      border-color: $border-focus;
+      box-shadow: $shadow-input;
+    }
   }
+}
+
+.auth-error {
+  padding: 0.65rem 0.85rem;
+  border-radius: $radius-sm;
+  font-size: 0.82rem;
+  color: $danger;
+  background: rgba(251, 113, 133, 0.1);
+  border: 1px solid rgba(251, 113, 133, 0.25);
+}
+
+.auth-submit {
+  width: 100%;
+  padding: 0.75rem;
+  margin-top: 0.25rem;
+  font-size: 0.95rem;
+}
+
+.auth-footer {
+  margin-top: 1.25rem;
+  text-align: center;
+  font-size: 0.88rem;
+  color: $text-muted;
 
   a {
-    color: #e1034d;
+    color: $accent-light;
     text-decoration: none;
-  }
+    font-weight: 600;
 
+    &:hover {
+      color: $accent-secondary;
+    }
+  }
 }

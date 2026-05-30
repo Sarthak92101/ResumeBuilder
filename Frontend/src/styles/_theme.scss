@@ -1,0 +1,49 @@
+// Sarthak Sharma — global design tokens
+$brand-name: "Sarthak Sharma";
+
+$bg-page: #070b14;
+$bg-card: #0f1629;
+$bg-panel: #151d33;
+$bg-input: #1a2440;
+$bg-elevated: #1e2a4a;
+$bg-glass: rgba(15, 22, 41, 0.72);
+
+$border-color: #2a3658;
+$border-focus: #8b5cf6;
+
+$text-primary: #f8fafc;
+$text-muted: #94a3b8;
+$text-soft: #64748b;
+
+$accent: #8b5cf6;
+$accent-light: #c4b5fd;
+$accent-secondary: #22d3ee;
+$accent-gold: #fbbf24;
+
+$success: #34d399;
+$warning: #fbbf24;
+$danger: #fb7185;
+
+$severity-high: #f87171;
+$severity-medium: #fbbf24;
+$severity-low: #34d399;
+
+$info-bg: rgba(34, 211, 238, 0.08);
+$info-border: rgba(34, 211, 238, 0.22);
+$info-text: #67e8f9;
+
+$gradient-brand: linear-gradient(135deg, #8b5cf6 0%, #6366f1 45%, #22d3ee 100%);
+$gradient-hero: linear-gradient(160deg, rgba(139, 92, 246, 0.2) 0%, rgba(34, 211, 238, 0.06) 50%, transparent 100%);
+$gradient-surface: linear-gradient(180deg, rgba(139, 92, 246, 0.1) 0%, transparent 100%);
+
+$font-stack: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+$font-display: "Plus Jakarta Sans", system-ui, sans-serif;
+
+$radius-sm: 0.5rem;
+$radius-md: 0.75rem;
+$radius-lg: 1rem;
+$radius-xl: 1.25rem;
+
+$shadow-card: 0 8px 32px rgba(0, 0, 0, 0.45);
+$shadow-glow: 0 0 60px rgba(139, 92, 246, 0.2);
+$shadow-input: 0 0 0 3px rgba(139, 92, 246, 0.22);

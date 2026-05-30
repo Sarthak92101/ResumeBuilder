@@ -1,19 +1,50 @@
-  .button {
-    border: none;
-    outline: none;
-    padding-inline: 1rem;
-    padding-block: 0.5rem;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
+@use "./theme" as *;
 
+.button {
+  border: none;
+  outline: none;
+  padding-inline: 1rem;
+  padding-block: 0.55rem;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  font-family: $font-stack;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
 
-    &.primary-button {
-      background-color: #e1034d;
-      color: white;
-    }
+  &.primary-button {
+    background: $gradient-brand;
+    color: #fff;
+    box-shadow: 0 2px 12px rgba(124, 58, 237, 0.35);
 
-    &:active{
-      transform: scale(0.9);
+    &:hover:not(:disabled) {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
     }
   }
+
+  &.secondary-button {
+    background: rgba(124, 58, 237, 0.12);
+    color: $accent-light;
+    border: 1px solid rgba(124, 58, 237, 0.35);
+
+    &:hover:not(:disabled) {
+      background: rgba(124, 58, 237, 0.2);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+    filter: none;
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+}

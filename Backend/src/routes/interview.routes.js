@@ -1,32 +1,49 @@
-const express = require('express');
-const authMiddleware = require('../middlewares/auth.middleware');
-const interviewController = require('../controllers/interview.controller');
-const upload=require("../middlewares/file.middleware")
+const express = require("express")
+const authMiddleware = require("../middlewares/auth.middleware")
+const interviewController = require("../controllers/interview.controller")
+const upload = require("../middlewares/file.middleware")
 
-const interviewRouter = express.Router();
-const router = express.Router();  
+const interviewRouter = express.Router()
 
-/**
- * @Route POST /api/interview/
- * @description  generate new interview report on the basis of resume and job description
- * @access private
- */
-interviewRouter.post("/",authMiddleware.authUser,upload.single("resume"),interviewController.generateInterviewReportController)
+const uploadResume = (req, res, next) => {
+  upload.single("resume")(req, res, (err) => {
+    if (!err) {
+      return next()
+    }
 
-/**
- * @Route POST /api/interview/report/:interviewId
- * @description  generate new interview report by interview id
- * @access private
- */
-interviewRouter.get("/report/:interviewId",authMiddleware.authUser,interviewController.getInterviewReportByIdController)
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).json({ message: "File size exceeds 5MB limit" })
+    }
 
+    return res.status(400).json({
+      message: err.message || "File upload failed",
+    })
+  })
+}
 
+interviewRouter.post(
+  "/",
+  authMiddleware.authUser,
+  uploadResume,
+  interviewController.generateInterviewReportController
+)
 
-/**
- * @Route POST /api/interview
- * @description get all interview report of logged in user
- * @access private
- */
-interviewRouter.get("/",authMiddleware.authUser,interviewController.getAllInterviewReportController )
+interviewRouter.get(
+  "/report/:interviewId/pdf",
+  authMiddleware.authUser,
+  interviewController.downloadInterviewReportPdfController
+)
 
-module.exports = interviewRouter;
+interviewRouter.get(
+  "/report/:interviewId",
+  authMiddleware.authUser,
+  interviewController.getInterviewReportByIdController
+)
+
+interviewRouter.get(
+  "/",
+  authMiddleware.authUser,
+  interviewController.getAllInterviewReportController
+)
+
+module.exports = interviewRouter
