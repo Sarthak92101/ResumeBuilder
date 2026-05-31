@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:3000", // ✅ FIXED
+  baseURL: "https://resumebuilder-backend-aidf.onrender.com", // ✅ FIXED
   withCredentials: true,
 });
 
