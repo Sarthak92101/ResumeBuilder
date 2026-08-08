@@ -30,10 +30,7 @@ const Login = () => {
   }
 
   return (
-    <AuthLayout
-      title="Welcome back"
-      subtitle="Sign in to access your interview plans and PDF exports."
-    >
+    <AuthLayout title="Welcome back" subtitle="Sign in to your account">
       <form className="auth-form" onSubmit={handleSubmit}>
         {error && <div className="auth-error">{error}</div>}
 

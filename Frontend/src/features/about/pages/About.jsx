@@ -13,37 +13,11 @@ const About = () => {
           <p className="about-hero__eyebrow">About me</p>
 
           <h1>
-            <span className="highlight">{ABOUT.name}</span>
+            <span className="highlight">Resume Maker</span>
           </h1>
 
-          <p className="about-hero__role">{ABOUT.role}</p>
-          <p className="about-hero__lead">{ABOUT.tagline}</p>
-
-         <div className="about-links">
-  <a
-    href={ABOUT.github.url}
-    target="_blank"
-    rel="noreferrer"
-    className="about-link-card"
-  >
-    <h3 className="about-link-card__title">GitHub</h3>
-    <p className="about-link-card__subtitle">
-      View my repositories & contributions
-    </p>
-  </a>
-
-  <a
-    href={ABOUT.portfolio.url}
-    target="_blank"
-    rel="noreferrer"
-    className="about-link-card"
-  >
-    <h3 className="about-link-card__title">Portfolio</h3>
-    <p className="about-link-card__subtitle">
-      Explore my projects & experience
-    </p>
-  </a>
-</div>
+          <p className="about-hero__role">AI Interview Preparation Tool</p>
+          <p className="about-hero__lead">Upload your resume and job description to generate a personalized interview strategy.</p>
         </section>
 
         <article className="about-card about-card--wide">

@@ -1,14 +1,14 @@
 export const ABOUT = {
-  name: "Sarthak Sharma",
-  role: "4th year CSE · MSIT",
+  name: "Resume Maker",
+  role: "AI Interview Preparation",
   tagline:
-    "Full-stack developer building interview prep tools with React, Node.js, and AI.",
+    "Build interview strategies with a resume analyzer and personalized question planner.",
   github: {
-    username: "Sarthak92101",
-    url: "https://github.com/Sarthak92101",
+    username: "username",
+    url: "https://github.com/username",
   },
   portfolio: {
-    label: "portfolio-sarthak-smoky.vercel.app",
-    url: "https://portfolio-sarthak-smoky.vercel.app/",
+    label: "portfolio.example.com",
+    url: "https://portfolio.example.com/",
   },
 }

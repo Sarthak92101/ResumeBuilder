@@ -32,10 +32,7 @@ const Register = () => {
   }
 
   return (
-    <AuthLayout
-      title="Create account"
-      subtitle="Join to build AI-powered interview strategies from your resume."
-    >
+    <AuthLayout title="Create account" subtitle="Get started in seconds">
       <form className="auth-form" onSubmit={handleSubmit}>
         {error && <div className="auth-error">{error}</div>}
 

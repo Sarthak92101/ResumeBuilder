@@ -1,7 +1,7 @@
-const resume=`**Sarthak Sharma**
-Delhi, India
-Email: [sarthak@example.com](mailto:sarthak@example.com) | Phone: +91-XXXXXXXXXX
-LinkedIn: linkedin.com/in/sarthak | GitHub: github.com/sarthak
+const resume=`**Candidate Name**
+Location
+Email: [email@example.com](mailto:email@example.com) | Phone: +91-XXXXXXXXXX
+LinkedIn: linkedin.com/in/username | GitHub: github.com/username
 
 ---
 
@@ -76,7 +76,7 @@ Fresher (Open to Internship Opportunities)
 * Gaming
 `
 
-const selfDescription=`I am Sarthak Sharma, a second-year Computer Science Engineering student with a strong interest in software development. I have completed my diploma in Computer Engineering, which gave me a solid technical foundation.
+const selfDescription=`I am a second-year Computer Science Engineering student with a strong interest in software development. I have completed my diploma in Computer Engineering, which gave me a solid technical foundation.
 
 I enjoy building projects, especially in full-stack development, where I have worked with technologies like React, Node.js, and MongoDB. I am passionate about learning new technologies and improving my problem-solving skills.
 

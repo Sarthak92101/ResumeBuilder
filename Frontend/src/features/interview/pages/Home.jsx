@@ -71,7 +71,7 @@ const Home = () => {
     if (loading) {
         return (
             <main className='loading-screen'>
-                <h1>Sarthak's system is Loading your interview plan...</h1>
+                <h1>The system is loading your interview plan...</h1>
             </main>
         )
     }
@@ -82,7 +82,6 @@ const Home = () => {
 
             {/* Page Header */}
             <header className='page-header'>
-                <p className='page-header__brand'>Sarthak Sharma · 4th year CSE, MSIT</p>
                 <h1>Create Your Custom <span className='highlight'>Interview Plan</span></h1>
                 <p>Let our AI analyze the job requirements and your unique profile to build a winning strategy.</p>
             </header>

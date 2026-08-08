@@ -2,19 +2,12 @@
 
 .auth-page {
   min-height: 100vh;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-
-  @media (max-width: 900px) {
-    grid-template-columns: 1fr;
-  }
-}
-
-.auth-about {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  background: $bg-page;
   position: relative;
-  padding: 3rem 2.5rem;
-  background: $bg-card;
-  border-right: 1px solid $border-color;
   overflow: hidden;
 
   &::before {
@@ -24,106 +17,57 @@
     background: $gradient-hero;
     pointer-events: none;
   }
-
-  @media (max-width: 900px) {
-    border-right: none;
-    border-bottom: 1px solid $border-color;
-    padding: 2rem 1.5rem;
-  }
-
-  &__inner {
-    position: relative;
-    z-index: 1;
-    max-width: 420px;
-  }
-
-  &__name {
-    font-size: clamp(2rem, 4vw, 2.5rem);
-    font-weight: 800;
-    line-height: 1.1;
-    margin-bottom: 0.5rem;
-    background: $gradient-brand;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  &__role {
-    font-size: 0.95rem;
-    color: $accent-light;
-    font-weight: 600;
-    margin-bottom: 1.25rem;
-  }
-
-  &__bio {
-    font-size: 0.92rem;
-    color: $text-muted;
-    line-height: 1.7;
-    margin-bottom: 1.5rem;
-  }
-
-  &__links {
-    display: flex;
-    flex-direction: column;
-    gap: 0.65rem;
-    margin-bottom: 1.5rem;
-  }
-
-  &__link {
-    display: block;
-    padding: 0.75rem 1rem;
-    border-radius: $radius-md;
-    background: rgba(139, 92, 246, 0.1);
-    border: 1px solid rgba(139, 92, 246, 0.28);
-    color: $accent-light;
-    text-decoration: none;
-    font-size: 0.88rem;
-    font-weight: 600;
-    transition: background 0.2s, border-color 0.2s;
-
-    &:hover {
-      background: rgba(139, 92, 246, 0.18);
-      border-color: $accent-light;
-      color: $text-primary;
-    }
-  }
-
-  &__more {
-    font-size: 0.88rem;
-    font-weight: 600;
-    color: $accent-secondary;
-    text-decoration: none;
-
-    &:hover {
-      color: $accent-light;
-    }
-  }
-}
-
-.auth-form-side {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem 1.5rem;
 }
 
 .auth-form-card {
+  position: relative;
+  z-index: 1;
   width: 100%;
-  max-width: 400px;
-  padding: 2rem;
+  max-width: 420px;
+  padding: 2.25rem 2rem;
   background: $bg-glass;
   border: 1px solid $border-color;
   border-radius: $radius-xl;
   box-shadow: $shadow-card, $shadow-glow;
   backdrop-filter: blur(16px);
 
+  &__brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    margin-bottom: 1.75rem;
+  }
+
+  &__logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: $radius-md;
+    background: $gradient-brand;
+    color: $text-primary;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-decoration: none;
+    letter-spacing: -0.02em;
+  }
+
+  &__app-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: $text-primary;
+  }
+
   &__head {
-    margin-bottom: 1.5rem;
+    text-align: center;
+    margin-bottom: 1.75rem;
 
     h2 {
       font-size: 1.65rem;
       font-weight: 800;
-      margin-bottom: 0.35rem;
+      margin-bottom: 0.4rem;
       color: $text-primary;
     }
 

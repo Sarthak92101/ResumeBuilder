@@ -18,8 +18,8 @@ const AppNavbar = () => {
   return (
     <header className="app-nav">
       <Link to="/" className="app-nav__brand">
-        <span className="app-nav__logo">SS</span>
-        <span>Sarthak Sharma</span>
+        <span className="app-nav__logo">RM</span>
+        <span>Resume Maker</span>
       </Link>
 
       <nav className="app-nav__links">
