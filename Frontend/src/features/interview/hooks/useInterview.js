@@ -6,6 +6,8 @@ import {
   generateResumePdf,
   getAllInterviewReports,
   getInterviewReportById,
+  getAtsScore,
+  getStarCheck,
 } from "../services/interview.api"
 
 export const useInterview = () => {
@@ -77,6 +79,22 @@ export const useInterview = () => {
         console.error("PDF download failed:", error)
         throw error
       }
+    },
+    []
+  )
+
+  const getAtsScoreForResume = useCallback(
+    async ({ resumeText, jobDescription, targetCompany }) => {
+      const response = await getAtsScore({ resumeText, jobDescription, targetCompany })
+      return response.score
+    },
+    []
+  )
+
+  const getStarFeedback = useCallback(
+    async ({ questionText, userAnswer }) => {
+      const response = await getStarCheck({ questionText, userAnswer })
+      return response.feedback
     },
     []
   )

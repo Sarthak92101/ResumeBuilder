@@ -7,9 +7,9 @@ const AuthLayout = ({ title, subtitle, children }) => {
       <div className="auth-form-card">
         <div className="auth-form-card__brand">
           <Link to="/" className="auth-form-card__logo">
-            RM
+            IQ
           </Link>
-          <span className="auth-form-card__app-name">Resume Maker</span>
+          <span className="auth-form-card__app-name">InterviewIq</span>
         </div>
 
         <div className="auth-form-card__head">

@@ -9,6 +9,8 @@ const Home = () => {
     const { loading, generateReport, reports } = useInterview()
     const [ jobDescription, setJobDescription ] = useState("")
     const [ selfDescription, setSelfDescription ] = useState("")
+    const [ targetCompany, setTargetCompany ] = useState("")
+    const [ interviewDate, setInterviewDate ] = useState("")
     const [ error, setError ] = useState("")
     const [ selectedFileName, setSelectedFileName ] = useState("")
     const resumeInputRef = useRef()
@@ -55,7 +57,13 @@ const Home = () => {
                 return
             }
 
-            const data = await generateReport({ jobDescription, selfDescription, resumeFile })
+            const data = await generateReport({
+                jobDescription,
+                selfDescription,
+                resumeFile,
+                targetCompany,
+                interviewDate,
+            })
             navigate(`/interview/${data._id}`)
         } catch (err) {
             const message =
@@ -147,6 +155,28 @@ const Home = () => {
 
                         {/* OR Divider */}
                         <div className='or-divider'><span>OR</span></div>
+
+                        {/* Company + Interview Date */}
+                        <div className='company-meta'>
+                            <label className='section-label' htmlFor='targetCompany'>Target Company</label>
+                            <input
+                                id='targetCompany'
+                                value={targetCompany}
+                                onChange={(e) => setTargetCompany(e.target.value)}
+                                className='panel__input'
+                                placeholder='Amazon, TCS, Infosys, etc.'
+                            />
+                        </div>
+                        <div className='company-meta'>
+                            <label className='section-label' htmlFor='interviewDate'>Interview Date</label>
+                            <input
+                                id='interviewDate'
+                                type='date'
+                                value={interviewDate}
+                                onChange={(e) => setInterviewDate(e.target.value)}
+                                className='panel__input'
+                            />
+                        </div>
 
                         {/* Quick Self-Description */}
                         <div className='self-description'>

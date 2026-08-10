@@ -13,6 +13,9 @@ async function startServer() {
       console.log(`Server is running on port ${PORT}`);
     });
 
+    const { startReminderScheduler } = require("./src/jobs/reminder.job")
+    startReminderScheduler()
+
   } catch (error) {
     console.log("Server Startup Error:", error);
     process.exit(1);

@@ -1,5 +1,5 @@
 export const ABOUT = {
-  name: "Resume Maker",
+  name: "InterviewIq",
   role: "AI Interview Preparation",
   tagline:
     "Build interview strategies with a resume analyzer and personalized question planner.",

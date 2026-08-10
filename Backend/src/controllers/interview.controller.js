@@ -10,6 +10,8 @@ async function generateInterviewReportController(req, res) {
   try {
     const jobDescription = req.body?.jobDescription?.trim()
     const selfDescription = req.body?.selfDescription?.trim() || ""
+    const targetCompany = req.body?.targetCompany?.trim() || ""
+    const interviewDate = req.body?.interviewDate ? new Date(req.body.interviewDate) : null
 
     if (!jobDescription) {
       return res.status(400).json({
@@ -17,9 +19,9 @@ async function generateInterviewReportController(req, res) {
       })
     }
 
-    if (!req.file && !selfDescription) {
+    if (!req.file && !selfDescription && !req.body?.resumeId) {
       return res.status(400).json({
-        message: "Please upload a resume PDF or provide a self description",
+        message: "Please upload a resume PDF, provide a self description, or select an existing resume",
       })
     }
 
@@ -30,6 +32,19 @@ async function generateInterviewReportController(req, res) {
     }
 
     let resumeText = selfDescription
+
+    // If the client provided a resumeId to reuse a previously uploaded resume
+    if (req.body?.resumeId) {
+      try {
+        const resumeModel = require("../models/resume.model")
+        const saved = await resumeModel.findOne({ _id: req.body.resumeId, user: req.user.id })
+        if (saved?.extractedText) {
+          resumeText = saved.extractedText
+        }
+      } catch (e) {
+        console.warn("Could not load resume by id:", e.message)
+      }
+    }
 
     if (req.file) {
       console.log(
@@ -46,6 +61,7 @@ async function generateInterviewReportController(req, res) {
       resume: resumeText,
       selfDescription: selfDescription || resumeText,
       jobDescription,
+      targetCompany,
     })
 
     const interviewReport = await interviewReportModel.create({
@@ -53,7 +69,15 @@ async function generateInterviewReportController(req, res) {
       resume: resumeText,
       selfDescription,
       jobDescription,
-      ...interviewReportByAi,
+      targetCompany,
+      interviewDate,
+      matchScore: interviewReportByAi.matchScore,
+      score: interviewReportByAi.score,
+      title: interviewReportByAi.title,
+      technicalQuestions: interviewReportByAi.technicalQuestions,
+      behaviouralQuestions: interviewReportByAi.behaviouralQuestions,
+      skillGaps: interviewReportByAi.skillGaps,
+      preparationPlan: interviewReportByAi.preparationPlan,
     })
 
     res.status(201).json({
@@ -107,7 +131,7 @@ async function getAllInterviewReportController(req, res) {
       .find({ user: req.user.id })
       .sort({ createdAt: -1 })
       .select(
-        "title matchScore createdAt updatedAt user"
+        "title matchScore score createdAt updatedAt user"
       )
 
     res.status(200).json({
@@ -120,6 +144,24 @@ async function getAllInterviewReportController(req, res) {
       message: "Error fetching interview reports",
       error: error.message,
     })
+  }
+}
+
+async function getInterviewStatsController(req, res) {
+  try {
+    const reports = await interviewReportModel
+      .find({ user: req.user.id })
+      .sort({ createdAt: 1 })
+      .select('score createdAt')
+
+    const scores = reports.map(r => ({ score: r.score ?? null, createdAt: r.createdAt }))
+    const validScores = scores.map(s => (typeof s.score === 'number' ? s.score : null)).filter(v => v !== null)
+    const avg = validScores.length ? (validScores.reduce((a, b) => a + b, 0) / validScores.length) : null
+
+    res.status(200).json({ message: 'Stats fetched', scores, average: avg })
+  } catch (error) {
+    console.error('Get interview stats error:', error)
+    res.status(500).json({ message: 'Error fetching stats', error: error.message })
   }
 }
 
@@ -164,9 +206,51 @@ async function downloadInterviewReportPdfController(req, res) {
   }
 }
 
+async function atsScoreController(req, res) {
+  try {
+    const resumeText = req.body?.resumeText?.trim()
+    const jobDescription = req.body?.jobDescription?.trim()
+    const targetCompany = req.body?.targetCompany?.trim() || ""
+
+    if (!resumeText || !jobDescription) {
+      return res.status(400).json({ message: "resumeText and jobDescription are required" })
+    }
+
+    const { getAtsResumeScore } = require("../services/ai.service")
+    const score = await getAtsResumeScore({ resumeText, jobDescription, targetCompany })
+
+    res.status(200).json({ message: "ATS score calculated", score })
+  } catch (error) {
+    console.error("ATS score error:", error)
+    res.status(500).json({ message: error.message || "Failed to calculate ATS score" })
+  }
+}
+
+async function starCheckController(req, res) {
+  try {
+    const questionText = req.body?.questionText?.trim()
+    const userAnswer = req.body?.userAnswer?.trim()
+
+    if (!questionText || !userAnswer) {
+      return res.status(400).json({ message: "questionText and userAnswer are required" })
+    }
+
+    const { getStarCheckFeedback } = require("../services/ai.service")
+    const feedback = await getStarCheckFeedback({ questionText, userAnswer })
+
+    res.status(200).json({ message: "STAR feedback generated", feedback })
+  } catch (error) {
+    console.error("STAR check error:", error)
+    res.status(500).json({ message: error.message || "Failed to evaluate answer" })
+  }
+}
+
 module.exports = {
   generateInterviewReportController,
   getInterviewReportByIdController,
   getAllInterviewReportController,
   downloadInterviewReportPdfController,
+  getInterviewStatsController,
+  atsScoreController,
+  starCheckController,
 }

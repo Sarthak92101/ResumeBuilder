@@ -7,9 +7,10 @@ const ai = new GoogleGenAI({
 
 const DEFAULT_MODELS = [
   process.env.GEMINI_MODEL,
+  "gemini-3-pro-preview",
+  "gemini-3-flash-preview",
+  "gemini-2.5-pro",
   "gemini-2.5-flash",
-  "gemini-2.0-flash-lite",
-  "gemini-1.5-flash",
 ].filter(Boolean)
 
 const MAX_RESUME_CHARS = 3500
@@ -18,19 +19,24 @@ const MAX_SELF_CHARS = 1500
 
 const interviewReportSchema = z.object({
   matchScore: z.number().min(0).max(100),
+  score: z.number().min(0).max(100),
   title: z.string().min(1),
   technicalQuestions: z.array(
     z.object({
       question: z.string(),
+      difficulty: z.enum(["Easy", "Medium", "Hard"]),
       intention: z.string(),
       answer: z.string(),
+      modelAnswer: z.string().optional(),
     })
   ),
   behaviouralQuestions: z.array(
     z.object({
       question: z.string(),
+      difficulty: z.enum(["Easy", "Medium", "Hard"]),
       intention: z.string(),
       answer: z.string(),
+      modelAnswer: z.string().optional(),
     })
   ),
   skillGaps: z.array(
@@ -46,6 +52,20 @@ const interviewReportSchema = z.object({
       tasks: z.array(z.string()),
     })
   ),
+})
+
+const atsScoreSchema = z.object({
+  matchPercentage: z.number().min(0).max(100),
+  matchedKeywords: z.array(z.string()),
+  missingKeywords: z.array(z.string()),
+})
+
+const starCheckSchema = z.object({
+  situation: z.boolean(),
+  task: z.boolean(),
+  action: z.boolean(),
+  result: z.boolean(),
+  improvementAdvice: z.string().min(1),
 })
 
 function truncate(text, max) {
@@ -141,11 +161,38 @@ function normalizeAiReport(raw) {
   const behaviouralQuestions =
     raw.behaviouralQuestions ?? raw.behavioralQuestions ?? []
 
+  const normalizeQuestions = (questions) =>
+    (questions || []).slice(0, 8).map((q) => {
+      const answerText =
+        q.answer ||
+        q.modelAnswer ||
+        q.model_answer ||
+        q.response ||
+        q.suggestedAnswer ||
+        ""
+      const modelAnswerText =
+        q.modelAnswer ||
+        q.model_answer ||
+        q.modelAnswerText ||
+        q.model_answer_text ||
+        q.answer ||
+        ""
+
+      return {
+        question: String(q.question || ""),
+        difficulty: String(q.difficulty || "Medium"),
+        intention: String(q.intention || ""),
+        answer: String(answerText),
+        modelAnswer: String(modelAnswerText),
+      }
+    })
+
   return {
     matchScore: Number(raw.matchScore),
+    score: Number(raw.score || raw.readinessScore || raw.readiness || 0),
     title: String(raw.title || "Interview Preparation"),
-    technicalQuestions: (raw.technicalQuestions || []).slice(0, 8),
-    behaviouralQuestions: behaviouralQuestions.slice(0, 8),
+    technicalQuestions: normalizeQuestions(raw.technicalQuestions),
+    behaviouralQuestions: normalizeQuestions(behaviouralQuestions),
     skillGaps: (raw.skillGaps || []).slice(0, 8).map((gap) => ({
       skill: String(gap.skill || "Skill"),
       severity: normalizeSeverity(gap.severity),
@@ -200,7 +247,7 @@ function parseJsonSafely(text) {
   )
 }
 
-function buildPrompt({ resume, selfDescription, jobDescription, strict = false }) {
+function buildPrompt({ resume, selfDescription, jobDescription, targetCompany, strict = false }) {
   const limits = `
 Rules:
 - Return ONLY one valid JSON object. No markdown, no comments, no trailing commas.
@@ -213,9 +260,10 @@ Rules:
 
   const schema = `{
   "matchScore": <number 0-100>,
+  "score": <number 0-100>,
   "title": "<job title>",
-  "technicalQuestions": [{ "question": "", "intention": "", "answer": "" }],
-  "behaviouralQuestions": [{ "question": "", "intention": "", "answer": "" }],
+  "technicalQuestions": [{ "question": "", "difficulty": "Easy|Medium|Hard", "intention": "", "answer": "", "modelAnswer": "" }],
+  "behaviouralQuestions": [{ "question": "", "difficulty": "Easy|Medium|Hard", "intention": "", "answer": "", "modelAnswer": "" }],
   "skillGaps": [{ "skill": "", "severity": "low|medium|high" }],
   "preparationPlan": [{ "day": 1, "focus": "", "tasks": ["", ""] }]
 }`
@@ -224,9 +272,15 @@ Rules:
     ? "\nIMPORTANT: Your previous response was invalid JSON. Fix and return ONLY valid JSON.\n"
     : ""
 
+  const companyContext = targetCompany
+    ? `Target company: ${targetCompany}. Adjust the blend of behavioral vs. technical questions and the question style to match ${targetCompany}. For example, if the company is Amazon, include leadership-principles-style behavioral questions.`
+    : ""
+
   return `${strictNote}You are an expert interview coach. Generate an interview preparation report as JSON.
 
 ${limits}
+
+${companyContext}
 
 Schema:
 ${schema}
@@ -241,10 +295,99 @@ Job Description:
 ${truncate(jobDescription, MAX_JOB_CHARS)}`
 }
 
+async function buildAtsScorePrompt({ resumeText, jobDescription, targetCompany }) {
+  const companyContext = targetCompany
+    ? `Target company: ${targetCompany}. Include the company-specific match when finding keywords and gaps.`
+    : ""
+
+  return `You are an expert resume coach.
+
+Rules:
+- Return ONLY one valid JSON object. No markdown, no comments, no trailing commas.
+- Use double quotes for all strings.
+- Keep lists short and focused.
+
+Schema:
+{
+  "matchPercentage": <number 0-100>,
+  "matchedKeywords": [""],
+  "missingKeywords": [""]
+}
+
+${companyContext}
+
+Resume Text:
+${truncate(resumeText, MAX_RESUME_CHARS)}
+
+Job Description:
+${truncate(jobDescription, MAX_JOB_CHARS)}`
+}
+
+async function buildStarCheckPrompt({ questionText, userAnswer }) {
+  return `You are an expert interview coach.
+
+Evaluate whether the provided answer follows the STAR framework: Situation, Task, Action, Result.
+- Return ONLY one valid JSON object.
+- Use true/false for the framework parts.
+- Provide a short improvementAdvice field.
+
+Schema:
+{
+  "situation": <true|false>,
+  "task": <true|false>,
+  "action": <true|false>,
+  "result": <true|false>,
+  "improvementAdvice": ""
+}
+
+Question:
+${questionText}
+
+Answer:
+${userAnswer}`
+}
+
+async function getAtsResumeScore({ resumeText, jobDescription, targetCompany }) {
+  if (!resumeText || !jobDescription) {
+    throw new Error("resumeText and jobDescription are required for ATS scoring")
+  }
+
+  const prompt = await buildAtsScorePrompt({ resumeText, jobDescription, targetCompany })
+  const text = await callGemini(prompt, { jsonMode: true })
+  const parsed = parseJsonSafely(text)
+  const validated = atsScoreSchema.safeParse(parsed)
+
+  if (!validated.success) {
+    console.error("ATS score validation failed:", validated.error.flatten())
+    throw new Error("AI returned an invalid ATS score response. Please try again.")
+  }
+
+  return validated.data
+}
+
+async function getStarCheckFeedback({ questionText, userAnswer }) {
+  if (!questionText || !userAnswer) {
+    throw new Error("questionText and userAnswer are required for STAR checking")
+  }
+
+  const prompt = await buildStarCheckPrompt({ questionText, userAnswer })
+  const text = await callGemini(prompt, { jsonMode: true })
+  const parsed = parseJsonSafely(text)
+  const validated = starCheckSchema.safeParse(parsed)
+
+  if (!validated.success) {
+    console.error("STAR check validation failed:", validated.error.flatten())
+    throw new Error("AI returned an invalid STAR check response. Please try again.")
+  }
+
+  return validated.data
+}
+
 async function generateInterviewReport({
   resume,
   selfDescription,
   jobDescription,
+  targetCompany,
 }) {
   if (!process.env.GOOGLE_API_KEY) {
     throw new Error("GOOGLE_API_KEY is not configured")
@@ -258,6 +401,7 @@ async function generateInterviewReport({
         resume,
         selfDescription,
         jobDescription,
+        targetCompany,
         strict: attempt > 0,
       })
 
@@ -293,3 +437,5 @@ async function generateInterviewReport({
 }
 
 module.exports = generateInterviewReport
+module.exports.getAtsResumeScore = getAtsResumeScore
+module.exports.getStarCheckFeedback = getStarCheckFeedback

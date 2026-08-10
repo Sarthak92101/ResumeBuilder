@@ -36,6 +36,11 @@ const technicalQuestionSchema = new mongoose.Schema({
     type: String,
     required: [true, "Question is required"]
   },
+  difficulty: {
+    type: String,
+    enum: ["Easy", "Medium", "Hard"],
+    default: "Medium",
+  },
   intention: {
     type: String,
     required: [true, "Intention is required"]
@@ -54,6 +59,11 @@ const BehaviouralQuestionSchema = new mongoose.Schema({
   question: {
     type: String,
     required: [true, "Question is required"]
+  },
+  difficulty: {
+    type: String,
+    enum: ["Easy", "Medium", "Hard"],
+    default: "Medium",
   },
   intention: {
     type: String,
@@ -109,10 +119,26 @@ const interviewReportSchema = new mongoose.Schema({
   selfDescription: {
     type: String
   },
+  targetCompany: {
+    type: String,
+    trim: true,
+  },
+  interviewDate: {
+    type: Date,
+  },
+  reminderSentAt: {
+    type: Date,
+  },
   matchScore: {
     type: Number,
     min: 0,
     max: 100
+  },
+  // Overall readiness score (0-100) produced by the AI
+  score: {
+    type: Number,
+    min: 0,
+    max: 100,
   },
   technicalQuestions: [technicalQuestionSchema],
   behaviouralQuestions: [BehaviouralQuestionSchema],

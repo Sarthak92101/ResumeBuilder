@@ -28,6 +28,18 @@ interviewRouter.post(
   interviewController.generateInterviewReportController
 )
 
+interviewRouter.post(
+  "/ats-score",
+  authMiddleware.authUser,
+  interviewController.atsScoreController
+)
+
+interviewRouter.post(
+  "/star-check",
+  authMiddleware.authUser,
+  interviewController.starCheckController
+)
+
 interviewRouter.get(
   "/report/:interviewId/pdf",
   authMiddleware.authUser,
@@ -44,6 +56,12 @@ interviewRouter.get(
   "/",
   authMiddleware.authUser,
   interviewController.getAllInterviewReportController
+)
+
+interviewRouter.get(
+  "/stats",
+  authMiddleware.authUser,
+  interviewController.getInterviewStatsController
 )
 
 module.exports = interviewRouter
