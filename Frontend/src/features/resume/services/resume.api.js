@@ -16,3 +16,13 @@ export const listResumes = async () => {
   const res = await api.get('/api/resume/')
   return res.data
 }
+
+export const createAtsScore = async (resumeId, jobDescription) => {
+  const res = await api.post('/api/resume/ats-score', { resumeId, jobDescription })
+  return res.data
+}
+
+export const getAtsScores = async (resumeId) => {
+  const res = await api.get(`/api/resume/ats-score/${resumeId}`)
+  return res.data
+}

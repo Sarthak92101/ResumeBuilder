@@ -16,4 +16,9 @@ const uploadResume = (req, res, next) => {
 router.post('/', authMiddleware.authUser, uploadResume, resumeController.uploadResumeController)
 router.get('/', authMiddleware.authUser, resumeController.listResumesController)
 
+/* ATS score endpoints */
+const atsController = require('../controllers/ats.controller')
+router.post('/ats-score', authMiddleware.authUser, atsController.createAtsScoreController)
+router.get('/ats-score/:resumeId', authMiddleware.authUser, atsController.listAtsScoresController)
+
 module.exports = router

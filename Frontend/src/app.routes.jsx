@@ -7,6 +7,7 @@ import About from "./features/about/pages/About";
 import Protected from "./features/auth/components/Protected";
 import Dashboard from "./features/dashboard/pages/Dashboard";
 import MyResumes from "./features/resume/pages/MyResumes";
+import AtsScoreChecker from "./features/resume/pages/AtsScoreChecker";
 
 export const router = createBrowserRouter([
   {
@@ -28,6 +29,10 @@ export const router = createBrowserRouter([
   {
     path: "/dashboard",
     element: <Protected><Dashboard /></Protected>
+  },
+  {
+    path: "/ats",
+    element: <Protected><AtsScoreChecker /></Protected>
   },
   {
     path: "/resumes",

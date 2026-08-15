@@ -32,6 +32,9 @@ const AppNavbar = () => {
         <Link to="/dashboard" className={linkClass("/dashboard")}>
           Dashboard
         </Link>
+        <Link to="/ats" className={linkClass("/ats")}>
+          ATS Checker
+        </Link>
         <Link to="/resumes" className={linkClass("/resumes")}>
           My Resumes
         </Link>

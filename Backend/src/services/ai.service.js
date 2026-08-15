@@ -5,13 +5,20 @@ const ai = new GoogleGenAI({
   apiKey: process.env.GOOGLE_API_KEY,
 })
 
-const DEFAULT_MODELS = [
-  process.env.GEMINI_MODEL,
-  "gemini-3-pro-preview",
-  "gemini-3-flash-preview",
-  "gemini-2.5-pro",
-  "gemini-2.5-flash",
-].filter(Boolean)
+function normalizeGeminiModel(value) {
+  if (!value) return ""
+  return String(value).trim().replace(/^['"]|['"]$/g, "")
+}
+
+const DEFAULT_MODELS = Array.from(
+  new Set([
+    normalizeGeminiModel(process.env.GEMINI_MODEL),
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-1.5-pro",
+  ].filter(Boolean))
+)
 
 const MAX_RESUME_CHARS = 3500
 const MAX_JOB_CHARS = 2500
@@ -60,6 +67,19 @@ const atsScoreSchema = z.object({
   missingKeywords: z.array(z.string()),
 })
 
+const detailedAtsSchema = z.object({
+  overallScore: z.number().min(0).max(100),
+  breakdown: z.object({
+    keywordMatch: z.number().min(0).max(100),
+    formatting: z.number().min(0).max(100),
+    achievements: z.number().min(0).max(100),
+    actionVerbs: z.number().min(0).max(100),
+    sectionCompleteness: z.number().min(0).max(100),
+  }),
+  missingKeywords: z.array(z.string()),
+  suggestions: z.array(z.string()),
+})
+
 const starCheckSchema = z.object({
   situation: z.boolean(),
   task: z.boolean(),
@@ -81,17 +101,28 @@ function parseGeminiError(error) {
     const parsed = JSON.parse(raw)
     const apiError = parsed?.error || parsed
     const code = apiError?.code
-    const message = apiError?.message || raw
+    const status = apiError?.status || apiError?.error?.status
+    const message = apiError?.message || apiError?.error?.message || raw
 
-    if (code === 429 || apiError?.status === "RESOURCE_EXHAUSTED") {
+    if (code === 429 || status === "RESOURCE_EXHAUSTED" || raw.includes("quota")) {
       return new Error(
         "Gemini API quota exceeded. Wait a few minutes, try again later, or use a new API key from https://aistudio.google.com/apikey"
       )
     }
 
-    if (code === 401 || code === 403) {
+    if (code === 401 || code === 403 || status === "UNAUTHENTICATED") {
       return new Error(
         "Invalid or unauthorized Gemini API key. Check GOOGLE_API_KEY in Backend/.env"
+      )
+    }
+
+    if (
+      code === 400 ||
+      status === "INVALID_ARGUMENT" ||
+      /model.*(not found|not available|unsupported|not supported)|unsupported.*model|invalid.*model/i.test(message)
+    ) {
+      return new Error(
+        "Gemini model is unavailable for this account. Set GEMINI_MODEL to a supported model like gemini-2.5-flash or gemini-2.0-flash in Backend/.env"
       )
     }
 
@@ -102,8 +133,76 @@ function parseGeminiError(error) {
         "Gemini API quota exceeded. Wait a few minutes or create a new API key at https://aistudio.google.com/apikey"
       )
     }
+    if (
+      raw.includes("model not found") ||
+      raw.includes("not available") ||
+      raw.includes("unsupported") ||
+      raw.includes("INVALID_ARGUMENT") ||
+      raw.includes("is not supported")
+    ) {
+      return new Error(
+        "Gemini model is unavailable for this account. Set GEMINI_MODEL to a supported model like gemini-2.5-flash or gemini-2.0-flash in Backend/.env"
+      )
+    }
     return new Error(raw)
   }
+}
+
+function extractGeminiTextFromResponse(response) {
+  if (!response) return ""
+  if (typeof response === "string") return response.trim()
+
+  const directCandidates = [
+    response.text,
+    response.outputText,
+    response.output_text,
+    response.content,
+    response.message,
+    response.response,
+  ]
+
+  for (const candidate of directCandidates) {
+    if (typeof candidate === "string" && candidate.trim()) return candidate.trim()
+  }
+
+  const flatten = (value, seen = new Set()) => {
+    if (!value || typeof value !== "object") return []
+    if (seen.has(value)) return []
+    seen.add(value)
+
+    const items = []
+
+    if (typeof value.text === "string" && value.text.trim()) items.push(value.text.trim())
+    if (typeof value.outputText === "string" && value.outputText.trim()) items.push(value.outputText.trim())
+
+    if (Array.isArray(value)) {
+      value.forEach((entry) => items.push(...flatten(entry, seen)))
+      return items
+    }
+
+    Object.values(value).forEach((entry) => items.push(...flatten(entry, seen)))
+    return items
+  }
+
+  const texts = flatten(response)
+  const joined = texts
+    .filter((text) => typeof text === "string" && text.trim())
+    .map((text) => String(text).trim())
+    .filter(Boolean)
+    .join(" ")
+
+  if (joined) return joined
+
+  const candidateText = response?.candidates?.[0]?.content?.parts
+    ?.map((part) => part?.text || "")
+    .join(" ")
+
+  if (candidateText && candidateText.trim()) return candidateText.trim()
+
+  const outputText = response?.output?.map((o) => o.content?.map((c) => c.text || "").join(" ")).join(" ")
+  if (outputText && outputText.trim()) return outputText.trim()
+
+  return ""
 }
 
 async function callGemini(prompt, { jsonMode = true } = {}) {
@@ -112,7 +211,23 @@ async function callGemini(prompt, { jsonMode = true } = {}) {
 
   for (const model of models) {
     try {
-      console.log(`Calling Gemini API with model: ${model}`)
+      // Prefer the Interactions API if available on the client
+      if (ai.interactions && typeof ai.interactions.create === "function") {
+        console.log(`Calling Gemini Interactions API with model: ${model}`)
+        const response = await ai.interactions.create({
+          model,
+          input: prompt,
+        })
+
+        const text = extractGeminiTextFromResponse(response)
+
+        if (!text) throw new Error("Empty response from AI service")
+
+        return text
+      }
+
+      // Fallback to older models.generateContent if interactions not available
+      console.log(`Calling Gemini models.generateContent with model: ${model}`)
       const response = await ai.models.generateContent({
         model,
         contents: prompt,
@@ -123,9 +238,7 @@ async function callGemini(prompt, { jsonMode = true } = {}) {
           : undefined,
       })
 
-      const text =
-        response.text ||
-        response.candidates?.[0]?.content?.parts?.[0]?.text
+      const text = extractGeminiTextFromResponse(response)
 
       if (!text) {
         throw new Error("Empty response from AI service")
@@ -134,9 +247,19 @@ async function callGemini(prompt, { jsonMode = true } = {}) {
       return text
     } catch (error) {
       lastError = parseGeminiError(error)
-      const isQuota =
-        lastError.message.includes("quota") ||
-        lastError.message.includes("RESOURCE_EXHAUSTED")
+      const msg = String(lastError.message || "").toLowerCase()
+      const isQuota = msg.includes("quota") || msg.includes("resource_exhausted")
+      const isUnsupportedModel =
+        msg.includes("model is unavailable") ||
+        msg.includes("not found") ||
+        msg.includes("not available") ||
+        msg.includes("unsupported") ||
+        msg.includes("invalid argument")
+
+      if (isUnsupportedModel) {
+        console.warn(`Model ${model} is unavailable, trying next supported model`)
+        continue
+      }
 
       if (!isQuota) {
         throw lastError
@@ -158,8 +281,7 @@ function normalizeSeverity(value) {
 }
 
 function normalizeAiReport(raw) {
-  const behaviouralQuestions =
-    raw.behaviouralQuestions ?? raw.behavioralQuestions ?? []
+  const behaviouralQuestions = raw.behaviouralQuestions ?? raw.behavioralQuestions ?? []
 
   const normalizeQuestions = (questions) =>
     (questions || []).slice(0, 8).map((q) => {
@@ -228,10 +350,7 @@ function repairJsonString(jsonText) {
 
 function parseJsonSafely(text) {
   const candidate = extractJsonCandidate(text)
-  const attempts = [
-    candidate,
-    repairJsonString(candidate),
-  ]
+  const attempts = [candidate, repairJsonString(candidate)]
 
   let lastError
   for (const attempt of attempts) {
@@ -242,21 +361,11 @@ function parseJsonSafely(text) {
     }
   }
 
-  throw new Error(
-    `AI returned invalid JSON (${lastError?.message || "parse error"}). Please try again.`
-  )
+  throw new Error(`AI returned invalid JSON (${lastError?.message || "parse error"}). Please try again.`)
 }
 
 function buildPrompt({ resume, selfDescription, jobDescription, targetCompany, strict = false }) {
-  const limits = `
-Rules:
-- Return ONLY one valid JSON object. No markdown, no comments, no trailing commas.
-- Use double quotes for all strings. Escape newlines inside strings as spaces.
-- technicalQuestions: exactly 5 items
-- behaviouralQuestions: exactly 5 items
-- skillGaps: 3 to 5 items (severity: low, medium, or high only)
-- preparationPlan: exactly 5 days (day 1 through 5)
-- Keep each answer under 120 words.`
+  const limits = `\nRules:\n- Return ONLY one valid JSON object. No markdown, no comments, no trailing commas.\n- Use double quotes for all strings. Escape newlines inside strings as spaces.\n- technicalQuestions: exactly 5 items\n- behaviouralQuestions: exactly 5 items\n- skillGaps: 3 to 5 items (severity: low, medium, or high only)\n- preparationPlan: exactly 5 days (day 1 through 5)\n- Keep each answer under 120 words.`
 
   const schema = `{
   "matchScore": <number 0-100>,
@@ -276,75 +385,27 @@ Rules:
     ? `Target company: ${targetCompany}. Adjust the blend of behavioral vs. technical questions and the question style to match ${targetCompany}. For example, if the company is Amazon, include leadership-principles-style behavioral questions.`
     : ""
 
-  return `${strictNote}You are an expert interview coach. Generate an interview preparation report as JSON.
-
-${limits}
-
-${companyContext}
-
-Schema:
-${schema}
-
-Resume:
-${truncate(resume, MAX_RESUME_CHARS)}
-
-Self Description:
-${truncate(selfDescription, MAX_SELF_CHARS) || "Use the resume."}
-
-Job Description:
-${truncate(jobDescription, MAX_JOB_CHARS)}`
+  return `${strictNote}You are an expert interview coach. Generate an interview preparation report as JSON.\n\n${limits}\n\n${companyContext}\n\nSchema:\n${schema}\n\nResume:\n${truncate(resume, MAX_RESUME_CHARS)}\n\nSelf Description:\n${truncate(selfDescription, MAX_SELF_CHARS) || "Use the resume."}\n\nJob Description:\n${truncate(jobDescription, MAX_JOB_CHARS)}`
 }
 
 async function buildAtsScorePrompt({ resumeText, jobDescription, targetCompany }) {
   const companyContext = targetCompany
     ? `Target company: ${targetCompany}. Include the company-specific match when finding keywords and gaps.`
-    : ""
+    : ''
 
-  return `You are an expert resume coach.
-
-Rules:
-- Return ONLY one valid JSON object. No markdown, no comments, no trailing commas.
-- Use double quotes for all strings.
-- Keep lists short and focused.
-
-Schema:
-{
-  "matchPercentage": <number 0-100>,
-  "matchedKeywords": [""],
-  "missingKeywords": [""]
+  return `You are an expert resume coach.\n\nRules:\n- Return ONLY one valid JSON object. No markdown, no comments, no trailing commas.\n- Use double quotes for all strings.\n- Keep lists short and focused.\n\nSchema:\n{\n  "matchPercentage": <number 0-100>,\n  "matchedKeywords": [""],\n  "missingKeywords": [""]\n}\n\n${companyContext}\n\nResume Text:\n${truncate(resumeText, MAX_RESUME_CHARS)}\n\nJob Description:\n${truncate(jobDescription, MAX_JOB_CHARS)}`
 }
 
-${companyContext}
+async function buildDetailedAtsPrompt({ resumeText, jobDescription, targetCompany }) {
+  const companyContext = targetCompany
+    ? `Target company: ${targetCompany}. Include the company-specific match when finding keywords and gaps.`
+    : ''
 
-Resume Text:
-${truncate(resumeText, MAX_RESUME_CHARS)}
-
-Job Description:
-${truncate(jobDescription, MAX_JOB_CHARS)}`
+  return `You are an expert resume coach.\n\nRules:\n- Return ONLY one valid JSON object. No markdown, no comments, no trailing commas.\n- Use double quotes for all strings.\n\nSchema:\n{\n  "overallScore": <number 0-100>,\n  "breakdown": {\n    "keywordMatch": <number 0-100>,\n    "formatting": <number 0-100>,\n    "achievements": <number 0-100>,\n    "actionVerbs": <number 0-100>,\n    "sectionCompleteness": <number 0-100>\n  },\n  "missingKeywords": [""],\n  "suggestions": [""]\n}\n\n${companyContext}\n\nResume Text:\n${truncate(resumeText, MAX_RESUME_CHARS)}\n\nJob Description:\n${truncate(jobDescription, MAX_JOB_CHARS)}`
 }
 
 async function buildStarCheckPrompt({ questionText, userAnswer }) {
-  return `You are an expert interview coach.
-
-Evaluate whether the provided answer follows the STAR framework: Situation, Task, Action, Result.
-- Return ONLY one valid JSON object.
-- Use true/false for the framework parts.
-- Provide a short improvementAdvice field.
-
-Schema:
-{
-  "situation": <true|false>,
-  "task": <true|false>,
-  "action": <true|false>,
-  "result": <true|false>,
-  "improvementAdvice": ""
-}
-
-Question:
-${questionText}
-
-Answer:
-${userAnswer}`
+  return `You are an expert interview coach.\n\nEvaluate whether the provided answer follows the STAR framework: Situation, Task, Action, Result.\n- Return ONLY one valid JSON object.\n- Use true/false for the framework parts.\n- Provide a short improvementAdvice field.\n\nSchema:\n{\n  "situation": <true|false>,\n  "task": <true|false>,\n  "action": <true|false>,\n  "result": <true|false>,\n  "improvementAdvice": ""\n}\n\nQuestion:\n${questionText}\n\nAnswer:\n${userAnswer}`
 }
 
 async function getAtsResumeScore({ resumeText, jobDescription, targetCompany }) {
@@ -360,6 +421,24 @@ async function getAtsResumeScore({ resumeText, jobDescription, targetCompany }) 
   if (!validated.success) {
     console.error("ATS score validation failed:", validated.error.flatten())
     throw new Error("AI returned an invalid ATS score response. Please try again.")
+  }
+
+  return validated.data
+}
+
+async function getDetailedAtsScore({ resumeText, jobDescription, targetCompany }) {
+  if (!resumeText || !jobDescription) {
+    throw new Error('resumeText and jobDescription are required for ATS scoring')
+  }
+
+  const prompt = await buildDetailedAtsPrompt({ resumeText, jobDescription, targetCompany })
+  const text = await callGemini(prompt, { jsonMode: true })
+  const parsed = parseJsonSafely(text)
+  const validated = detailedAtsSchema.safeParse(parsed)
+
+  if (!validated.success) {
+    console.error('Detailed ATS score validation failed:', validated.error.flatten())
+    throw new Error('AI returned an invalid ATS score response. Please try again.')
   }
 
   return validated.data
@@ -439,3 +518,4 @@ async function generateInterviewReport({
 module.exports = generateInterviewReport
 module.exports.getAtsResumeScore = getAtsResumeScore
 module.exports.getStarCheckFeedback = getStarCheckFeedback
+module.exports.getDetailedAtsScore = getDetailedAtsScore
