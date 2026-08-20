@@ -1,5 +1,5 @@
 export const ABOUT = {
-  name: "InterviewIq",
+  name: "SkillMirror",
   role: "AI Interview Preparation",
   tagline:
     "Build interview strategies with a resume analyzer and personalized question planner.",

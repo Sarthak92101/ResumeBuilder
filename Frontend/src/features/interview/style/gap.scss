@@ -1,0 +1,191 @@
+@use "../../../styles/theme" as *;
+
+.gap-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.gap-header {
+  margin-bottom: 1.5rem;
+
+  h1 {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: $text-primary;
+    margin-bottom: 0.2rem;
+  }
+  p { color: $text-muted; font-size: 0.88rem; margin: 0; line-height: 1.5; }
+}
+
+// ── Form ──────────────────────────────────────────────────────────────────────
+.gap-form {
+  background: $bg-card;
+  border: 1px solid $border-color;
+  border-radius: $radius-md;
+  padding: 1.5rem;
+  box-shadow: $shadow-card;
+}
+
+.gap-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.gap-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+
+  span {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: $text-muted;
+  }
+
+  select, textarea {
+    background: $bg-input;
+    border: 1px solid $border-color;
+    border-radius: 0.5rem;
+    padding: 0.65rem 0.85rem;
+    color: $text-primary;
+    font-family: $font-stack;
+    font-size: 0.85rem;
+    resize: vertical;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    line-height: 1.5;
+
+    &::placeholder { color: $text-soft; }
+
+    &:focus {
+      outline: none;
+      border-color: $border-focus;
+      box-shadow: $shadow-input;
+    }
+  }
+}
+
+.gap-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.gap-error {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.85rem;
+  background: rgba($danger, 0.1);
+  border: 1px solid rgba($danger, 0.25);
+  border-radius: 0.4rem;
+  color: $danger;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+// ── Results ───────────────────────────────────────────────────────────────────
+.gap-results {
+  margin-top: 1.5rem;
+  background: $bg-card;
+  border: 1px solid $border-color;
+  border-radius: $radius-md;
+  padding: 1.5rem;
+  box-shadow: $shadow-card;
+
+  h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: $text-primary;
+    margin: 0 0 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    &::before {
+      content: '';
+      width: 3px;
+      height: 14px;
+      background: $gradient-brand;
+      border-radius: 2px;
+    }
+  }
+}
+
+.gap-results__summary {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.gap-count {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.3rem 0.75rem;
+  border-radius: 2rem;
+  letter-spacing: 0.02em;
+
+  &--have { color: $severity-low; background: rgba($severity-low, 0.12); border: 1px solid rgba($severity-low, 0.2); }
+  &--add { color: $severity-medium; background: rgba($severity-medium, 0.12); border: 1px solid rgba($severity-medium, 0.2); }
+  &--learn { color: $severity-high; background: rgba($severity-high, 0.12); border: 1px solid rgba($severity-high, 0.2); }
+}
+
+.gap-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th, td {
+    text-align: left;
+    padding: 0.65rem 0.85rem;
+    border-bottom: 1px solid $border-color;
+    font-size: 0.84rem;
+  }
+
+  th {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: $text-soft;
+    background: $bg-panel;
+    border-bottom: 2px solid $border-color;
+
+    &:first-child { border-radius: 0.4rem 0 0 0; }
+    &:last-child { border-radius: 0 0.4rem 0 0; }
+  }
+
+  tbody tr {
+    transition: background 0.15s;
+
+    &:hover { background: rgba($accent, 0.04); }
+  }
+
+  &__skill {
+    font-weight: 600;
+    color: $text-primary;
+  }
+
+  &__suggestion {
+    color: $text-muted;
+    line-height: 1.5;
+  }
+}
+
+.gap-status-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 0.35rem;
+  border: 1px solid;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 700px) {
+  .gap-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .gap-results__summary {
+    flex-wrap: wrap;
+  }
+}

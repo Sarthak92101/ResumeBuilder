@@ -5,6 +5,7 @@ const {
   generateInterviewPlanPdf,
 } = require("../services/pdfExport.service")
 const interviewReportModel = require("../models/interviewReport.model")
+const crypto = require("crypto")
 
 async function generateInterviewReportController(req, res) {
   try {
@@ -12,6 +13,7 @@ async function generateInterviewReportController(req, res) {
     const selfDescription = req.body?.selfDescription?.trim() || ""
     const targetCompany = req.body?.targetCompany?.trim() || ""
     const interviewDate = req.body?.interviewDate ? new Date(req.body.interviewDate) : null
+    const language = req.body?.language || "en"
 
     if (!jobDescription) {
       return res.status(400).json({
@@ -62,6 +64,7 @@ async function generateInterviewReportController(req, res) {
       selfDescription: selfDescription || resumeText,
       jobDescription,
       targetCompany,
+      language,
     })
 
     const interviewReport = await interviewReportModel.create({
@@ -71,6 +74,7 @@ async function generateInterviewReportController(req, res) {
       jobDescription,
       targetCompany,
       interviewDate,
+      language,
       matchScore: interviewReportByAi.matchScore,
       score: interviewReportByAi.score,
       title: interviewReportByAi.title,
@@ -245,6 +249,149 @@ async function starCheckController(req, res) {
   }
 }
 
+// ── Feature 1: Voice Feedback ─────────────────────────────────────────────────
+async function voiceFeedbackController(req, res) {
+  try {
+    const questionText = req.body?.questionText?.trim()
+    const transcript = req.body?.transcript?.trim()
+
+    if (!questionText || !transcript) {
+      return res.status(400).json({ message: "questionText and transcript are required" })
+    }
+
+    const { getVoiceFeedback } = require("../services/ai.service")
+    const feedback = await getVoiceFeedback({ questionText, transcript })
+
+    res.status(200).json({ message: "Voice feedback generated", feedback })
+  } catch (error) {
+    console.error("Voice feedback error:", error)
+    res.status(500).json({ message: error.message || "Failed to generate voice feedback" })
+  }
+}
+
+// ── Feature 2: Gap Analysis ───────────────────────────────────────────────────
+async function gapAnalysisController(req, res) {
+  try {
+    const { resumeId, resumeText: resumeTextRaw, jobDescription } = req.body || {}
+
+    if (!jobDescription?.trim()) {
+      return res.status(400).json({ message: "jobDescription is required" })
+    }
+
+    let resumeText = resumeTextRaw?.trim() || ""
+
+    if (!resumeText && resumeId) {
+      const resumeModel = require("../models/resume.model")
+      const saved = await resumeModel.findOne({ _id: resumeId, user: req.user.id })
+      if (saved?.extractedText) {
+        resumeText = saved.extractedText
+      }
+    }
+
+    if (!resumeText) {
+      return res.status(400).json({ message: "resumeText or resumeId with extracted text is required" })
+    }
+
+    const { getGapAnalysis } = require("../services/ai.service")
+    const analysis = await getGapAnalysis({ resumeText, jobDescription: jobDescription.trim() })
+
+    res.status(200).json({ message: "Gap analysis generated", analysis })
+  } catch (error) {
+    console.error("Gap analysis error:", error)
+    res.status(500).json({ message: error.message || "Failed to generate gap analysis" })
+  }
+}
+
+// ── Feature 3: Adaptive Next Question ─────────────────────────────────────────
+async function nextQuestionController(req, res) {
+  try {
+    const { previousQuestions, runningScore, resumeText, jobDescription } = req.body || {}
+
+    if (typeof runningScore !== "number") {
+      return res.status(400).json({ message: "runningScore (number) is required" })
+    }
+
+    const { getNextQuestion } = require("../services/ai.service")
+    const question = await getNextQuestion({
+      previousQuestions: previousQuestions || [],
+      runningScore,
+      resumeText: resumeText || "",
+      jobDescription: jobDescription || "",
+    })
+
+    res.status(200).json({ message: "Next question generated", question })
+  } catch (error) {
+    console.error("Next question error:", error)
+    res.status(500).json({ message: error.message || "Failed to generate next question" })
+  }
+}
+
+// ── Feature 4: Mentor Share Link ──────────────────────────────────────────────
+async function shareReportController(req, res) {
+  try {
+    const { interviewId } = req.params
+    const report = await interviewReportModel.findOne({ _id: interviewId, user: req.user.id })
+
+    if (!report) {
+      return res.status(404).json({ message: "Interview report not found" })
+    }
+
+    if (!report.shareToken) {
+      report.shareToken = crypto.randomUUID()
+      await report.save()
+    }
+
+    res.status(200).json({ message: "Share link created", shareToken: report.shareToken })
+  } catch (error) {
+    console.error("Share report error:", error)
+    res.status(500).json({ message: error.message || "Failed to create share link" })
+  }
+}
+
+async function getSharedReportController(req, res) {
+  try {
+    const { shareToken } = req.params
+    const report = await interviewReportModel.findOne({ shareToken })
+      .select("title matchScore score technicalQuestions behaviouralQuestions skillGaps preparationPlan language createdAt mentorComments")
+
+    if (!report) {
+      return res.status(404).json({ message: "Report not found or no longer shared" })
+    }
+
+    res.status(200).json({ message: "Shared report found", report })
+  } catch (error) {
+    console.error("Get shared report error:", error)
+    res.status(500).json({ message: error.message || "Failed to fetch shared report" })
+  }
+}
+
+async function addMentorCommentController(req, res) {
+  try {
+    const { shareToken } = req.params
+    const { author, text } = req.body || {}
+
+    if (!text?.trim()) {
+      return res.status(400).json({ message: "Comment text is required" })
+    }
+
+    const report = await interviewReportModel.findOne({ shareToken })
+    if (!report) {
+      return res.status(404).json({ message: "Report not found" })
+    }
+
+    report.mentorComments.push({
+      author: author?.trim() || "Anonymous Mentor",
+      text: text.trim(),
+    })
+    await report.save()
+
+    res.status(201).json({ message: "Comment added", comment: report.mentorComments[report.mentorComments.length - 1] })
+  } catch (error) {
+    console.error("Add mentor comment error:", error)
+    res.status(500).json({ message: error.message || "Failed to add comment" })
+  }
+}
+
 module.exports = {
   generateInterviewReportController,
   getInterviewReportByIdController,
@@ -253,4 +400,10 @@ module.exports = {
   getInterviewStatsController,
   atsScoreController,
   starCheckController,
+  voiceFeedbackController,
+  gapAnalysisController,
+  nextQuestionController,
+  shareReportController,
+  getSharedReportController,
+  addMentorCommentController,
 }

@@ -1,20 +1,25 @@
-// InterviewIq — global design tokens
-$brand-name: "InterviewIq";
+// SkillMirror — global design tokens
+// SCSS variables reference CSS custom properties for runtime theme switching
 
-$bg-page: #070b14;
-$bg-card: #0f1629;
-$bg-panel: #151d33;
-$bg-input: #1a2440;
-$bg-elevated: #1e2a4a;
-$bg-glass: rgba(15, 22, 41, 0.72);
+$brand-name: "SkillMirror";
 
-$border-color: #2a3658;
-$border-focus: #8b5cf6;
+// ── Surface colors (dark defaults) ────────────────────────────────────────────
+$bg-page: var(--bg-page);
+$bg-card: var(--bg-card);
+$bg-panel: var(--bg-panel);
+$bg-input: var(--bg-input);
+$bg-elevated: var(--bg-elevated);
+$bg-glass: var(--bg-glass);
 
-$text-primary: #f8fafc;
-$text-muted: #94a3b8;
-$text-soft: #64748b;
+$border-color: var(--border-color);
+$border-focus: var(--border-focus);
 
+// ── Text colors ───────────────────────────────────────────────────────────────
+$text-primary: var(--text-primary);
+$text-muted: var(--text-muted);
+$text-soft: var(--text-soft);
+
+// ── Brand colors (always the same) ────────────────────────────────────────────
 $accent: #8b5cf6;
 $accent-light: #c4b5fd;
 $accent-secondary: #22d3ee;
@@ -32,18 +37,22 @@ $info-bg: rgba(34, 211, 238, 0.08);
 $info-border: rgba(34, 211, 238, 0.22);
 $info-text: #67e8f9;
 
+// ── Gradients ─────────────────────────────────────────────────────────────────
 $gradient-brand: linear-gradient(135deg, #8b5cf6 0%, #6366f1 45%, #22d3ee 100%);
 $gradient-hero: linear-gradient(160deg, rgba(139, 92, 246, 0.2) 0%, rgba(34, 211, 238, 0.06) 50%, transparent 100%);
 $gradient-surface: linear-gradient(180deg, rgba(139, 92, 246, 0.1) 0%, transparent 100%);
 
+// ── Typography ────────────────────────────────────────────────────────────────
 $font-stack: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
 $font-display: "Plus Jakarta Sans", system-ui, sans-serif;
 
+// ── Radii ─────────────────────────────────────────────────────────────────────
 $radius-sm: 0.5rem;
 $radius-md: 0.75rem;
 $radius-lg: 1rem;
 $radius-xl: 1.25rem;
 
+// ── Shadows ───────────────────────────────────────────────────────────────────
 $shadow-card: 0 8px 32px rgba(0, 0, 0, 0.45);
 $shadow-glow: 0 0 60px rgba(139, 92, 246, 0.2);
 $shadow-input: 0 0 0 3px rgba(139, 92, 246, 0.22);

@@ -1,4 +1,4 @@
-# ResumeMaker - AI-Powered Resume Interview Platform
+# SkillMirror - AI-Powered Resume Interview Platform
 
 An intelligent web application that generates personalized interview questions and reports based on user resumes using AI technology. This platform helps job seekers prepare for interviews by analyzing their resume and providing targeted interview practice.
 
@@ -40,7 +40,7 @@ An intelligent web application that generates personalized interview questions a
 ### Folder Structure
 
 ```
-ResumeMaker/
+SkillMirror/
 ├── Frontend/                          # React + Vite application
 │   ├── src/
 │   │   ├── features/
@@ -112,7 +112,7 @@ ResumeMaker/
 
 ```bash
 git clone <repository-url>
-cd ResumeMaker
+cd SkillMirror
 ```
 
 #### 2. Set Up Environment Variables
@@ -121,7 +121,7 @@ Create a `.env` file in the `Backend/` directory:
 
 ```env
 # MongoDB Connection
-MONGO_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/resumemaker?retryWrites=true&w=majority
+MONGO_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/skillmirror?retryWrites=true&w=majority
 
 # JWT Configuration
 JWT_SECRET=your_jwt_secret_key_here

@@ -444,3 +444,63 @@ $badge-best: $accent-secondary;
         }
     }
 }
+
+// ── Language Toggle ────────────────────────────────────────────────────────────
+.language-toggle {
+    display: flex;
+    gap: 0.35rem;
+    background: $bg-input;
+    border: 1px solid $border-color;
+    border-radius: 0.5rem;
+    padding: 0.2rem;
+
+    &__btn {
+        flex: 1;
+        padding: 0.4rem 0.6rem;
+        border: none;
+        border-radius: 0.35rem;
+        background: transparent;
+        color: $text-muted;
+        font-family: $font-stack;
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover {
+            color: $text-primary;
+            background: rgba($accent, 0.06);
+        }
+
+        &--active {
+            background: $gradient-brand;
+            color: #fff;
+            box-shadow: 0 1px 6px rgba($accent, 0.25);
+        }
+    }
+}
+
+// ── File Selected / Error ─────────────────────────────────────────────────────
+.dropzone__selected-name {
+    margin-top: 0.65rem;
+    font-size: 0.82rem;
+    color: $success;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+
+    &::before {
+        content: '✓';
+        font-weight: 700;
+    }
+}
+
+.home-error {
+    padding: 0.5rem 0.85rem;
+    background: rgba($danger, 0.1);
+    border: 1px solid rgba($danger, 0.25);
+    border-radius: 0.4rem;
+    color: $danger;
+    font-size: 0.82rem;
+    margin-bottom: 0.5rem;
+}

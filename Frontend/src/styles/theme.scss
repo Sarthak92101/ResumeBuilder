@@ -1,32 +1,44 @@
 @use './_theme' as *;
 @forward './_theme';
 
-:root {
-  --bg-page: #{$bg-page};
-  --bg-card: #{$bg-card};
-  --bg-panel: #{$bg-panel};
-  --text-primary: #{$text-primary};
-  --text-muted: #{$text-muted};
-  --accent: #{$accent};
-  --success: #{$success};
-  --warning: #{$warning};
-  --danger: #{$danger};
-}
+// ── CSS Custom Properties ─────────────────────────────────────────────────────
+// These are set on :root (dark default) and overridden by [data-theme="light"]
 
-[data-theme="dark"] {
-  --background: var(--bg-page);
-  --card: var(--bg-card);
-  --panel: var(--bg-panel);
-  --text: var(--text-primary);
-  --muted: var(--text-muted);
-  --accent: var(--accent);
+:root {
+  // Dark theme (default)
+  --bg-page: #070b14;
+  --bg-card: #0f1629;
+  --bg-panel: #151d33;
+  --bg-input: #1a2440;
+  --bg-elevated: #1e2a4a;
+  --bg-glass: rgba(15, 22, 41, 0.72);
+
+  --border-color: #2a3658;
+  --border-focus: #8b5cf6;
+
+  --text-primary: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-soft: #64748b;
+
+  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --shadow-input: 0 0 0 3px rgba(139, 92, 246, 0.22);
 }
 
 [data-theme="light"] {
-  --background: #f7fafc;
-  --card: #ffffff;
-  --panel: #f1f5f9;
-  --text: #0f172a;
-  --muted: #475569;
-  --accent: #{$accent};
+  --bg-page: #f1f4f9;
+  --bg-card: #ffffff;
+  --bg-panel: #f0f2f7;
+  --bg-input: #f5f6fa;
+  --bg-elevated: #ffffff;
+  --bg-glass: rgba(255, 255, 255, 0.82);
+
+  --border-color: #d4d9e2;
+  --border-focus: #8b5cf6;
+
+  --text-primary: #1a1f2e;
+  --text-muted: #5a6275;
+  --text-soft: #8c93a4;
+
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.06);
+  --shadow-input: 0 0 0 3px rgba(139, 92, 246, 0.15);
 }

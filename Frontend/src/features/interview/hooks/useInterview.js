@@ -8,6 +8,10 @@ import {
   getInterviewReportById,
   getAtsScore,
   getStarCheck,
+  getVoiceFeedback,
+  getGapAnalysis,
+  getNextQuestion,
+  shareReport,
 } from "../services/interview.api"
 
 export const useInterview = () => {
@@ -21,13 +25,16 @@ export const useInterview = () => {
   const { loading, setLoading, report, setReport, reports, setReports } = context
 
   const generateReport = useCallback(
-    async ({ jobDescription, selfDescription, resumeFile }) => {
+    async ({ jobDescription, selfDescription, resumeFile, targetCompany, interviewDate, language }) => {
       setLoading(true)
       try {
         const response = await generateInterviewReport({
           jobDescription,
           selfDescription,
           resumeFile,
+          targetCompany,
+          interviewDate,
+          language,
         })
         setReport(response.interviewReport)
         return response.interviewReport
@@ -99,6 +106,38 @@ export const useInterview = () => {
     []
   )
 
+  const requestVoiceFeedback = useCallback(
+    async ({ interviewId, transcript }) => {
+      const response = await getVoiceFeedback({ interviewId, transcript })
+      return response.feedback
+    },
+    []
+  )
+
+  const requestGapAnalysis = useCallback(
+    async ({ resumeId, jobDescription }) => {
+      const response = await getGapAnalysis({ resumeId, jobDescription })
+      return response.analysis
+    },
+    []
+  )
+
+  const requestNextQuestion = useCallback(
+    async ({ previousQuestions, runningScore, resumeText, jobDescription }) => {
+      const response = await getNextQuestion({ previousQuestions, runningScore, resumeText, jobDescription })
+      return response.question
+    },
+    []
+  )
+
+  const shareInterviewReport = useCallback(
+    async (interviewId) => {
+      const response = await shareReport(interviewId)
+      return response.shareToken
+    },
+    []
+  )
+
   useEffect(() => {
     if (interviewId) {
       getReportById(interviewId)
@@ -115,5 +154,11 @@ export const useInterview = () => {
     getReportById,
     getReports,
     getResumePdf,
+    getAtsScoreForResume,
+    getStarFeedback,
+    requestVoiceFeedback,
+    requestGapAnalysis,
+    requestNextQuestion,
+    shareInterviewReport,
   }
 }

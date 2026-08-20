@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import AppNavbar from '../../../components/AppNavbar'
 import { getInterviewStats } from '../../interview/services/interview.api'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import './Dashboard.scss'
 
 const Dashboard = () => {
   const [data, setData] = useState([])
@@ -30,13 +31,13 @@ const Dashboard = () => {
       <main className="container">
         <h1>Progress Dashboard</h1>
         <div className="dashboard-grid">
-          <div className="card">
+          <div className="dashboard-card">
             <h3>Average Readiness</h3>
-            <p className="avg-score">{average !== null ? Math.round(average) : '—'}</p>
+            <p className="dashboard-card__score">{average !== null ? Math.round(average) : '—'}</p>
           </div>
-          <div className="card chart-card">
+          <div className="dashboard-card dashboard-card--chart">
             <h3>Score Over Time</h3>
-            <div style={{ width: '100%', height: 300 }}>
+            <div className="dashboard-chart">
               <ResponsiveContainer>
                 <LineChart data={data} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" />

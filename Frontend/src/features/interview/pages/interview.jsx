@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import '../style/interview.scss'
 import { useInterview } from '../hooks/useInterview.js'
-import { useParams } from 'react-router'
+import { useParams, Link } from 'react-router'
 import AppNavbar from '../../../components/AppNavbar'
+import { shareReport } from '../services/interview.api'
 
 
 const STAR_LABELS = [
@@ -22,7 +23,6 @@ const NAV_ITEMS = [
 const QuestionCard = ({ item, index }) => {
     const [ open, setOpen ] = useState(false)
     const [copied, setCopied] = useState(false)
-    const [showModelAnswer, setShowModelAnswer] = useState(false)
 
     const difficultyClass = item.difficulty === 'Easy' ? 'badge--low' : item.difficulty === 'Hard' ? 'badge--high' : 'badge--mid'
 
@@ -31,7 +31,7 @@ const QuestionCard = ({ item, index }) => {
             await navigator.clipboard.writeText(text)
             setCopied(true)
             setTimeout(() => setCopied(false), 1500)
-        } catch (e) {
+        } catch {
             // ignore
         }
     }
@@ -89,6 +89,8 @@ const Interview = () => {
     const { report, loading, getResumePdf } = useInterview()
     const { interviewId } = useParams()
     const [ pdfLoading, setPdfLoading ] = useState(false)
+    const [shareLoading, setShareLoading] = useState(false)
+    const [shareToken, setShareToken] = useState(null)
 
     const handleDownloadPdf = async (type) => {
         try {
@@ -100,6 +102,20 @@ const Interview = () => {
             setPdfLoading(false)
         }
     }
+
+    const handleShare = async () => {
+        try {
+            setShareLoading(true)
+            const res = await shareReport(interviewId)
+            setShareToken(res.shareToken)
+        } catch {
+            alert("Failed to generate share link.")
+        } finally {
+            setShareLoading(false)
+        }
+    }
+
+    const shareUrl = shareToken ? `${window.location.origin}/shared/${shareToken}` : ''
 
 
 
@@ -138,7 +154,18 @@ const Interview = () => {
                         ))}
                     </div>
                     <div className='interview-nav__downloads'>
-                        <p className='interview-nav__downloads-label'>Export PDF</p>
+                        <p className='interview-nav__downloads-label'>Practice</p>
+                        <Link to={`/voice/${interviewId}`} className='button primary-button voice-mock-btn'>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className='voice-mock-btn__icon'>
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                                <line x1="12" y1="19" x2="12" y2="23"/>
+                                <line x1="8" y1="23" x2="16" y2="23"/>
+                            </svg>
+                            Voice Mock Interview
+                        </Link>
+
+                        <p className='interview-nav__downloads-label' style={{ marginTop: '1rem' }}>Export PDF</p>
                         <div className='interview-nav__download-row'>
                             <button
                                 type='button'
@@ -155,6 +182,24 @@ const Interview = () => {
                                 {pdfLoading ? "Generating…" : "Full Plan PDF"}
                             </button>
                         </div>
+
+                        <p className='interview-nav__downloads-label interview-nav__downloads-label--mt'>Share Report</p>
+                        {shareToken ? (
+                            <div className='share-link-box'>
+                                <input type='text' readOnly value={shareUrl} className='share-link-input' onClick={(e) => e.target.select()} />
+                                <button type='button' className='button secondary-button' onClick={() => navigator.clipboard.writeText(shareUrl)}>
+                                    Copy
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                type='button'
+                                onClick={handleShare}
+                                disabled={shareLoading}
+                                className='button primary-button'>
+                                {shareLoading ? "Generating…" : "Generate Share Link"}
+                            </button>
+                        )}
                     </div>
                 </nav>
 

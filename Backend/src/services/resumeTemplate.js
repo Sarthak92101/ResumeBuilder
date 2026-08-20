@@ -1,4 +1,4 @@
-const WATERMARK = "Resume Maker"
+const WATERMARK = "SkillMirror"
 const PRIMARY = "#5b21b6"
 const SECONDARY = "#0e7490"
 const SIDEBAR_BG = "#1e1b4b"

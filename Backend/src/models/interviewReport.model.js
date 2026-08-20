@@ -108,6 +108,11 @@ const preparationPlanSchema = new mongoose.Schema({
 }, {
   _id: false
 })
+const mentorCommentSchema = new mongoose.Schema({
+  author: { type: String, default: "Anonymous Mentor" },
+  text: { type: String, required: true },
+}, { _id: true, timestamps: true })
+
 const interviewReportSchema = new mongoose.Schema({
   jobDescription: {
     type: String,
@@ -134,7 +139,6 @@ const interviewReportSchema = new mongoose.Schema({
     min: 0,
     max: 100
   },
-  // Overall readiness score (0-100) produced by the AI
   score: {
     type: Number,
     min: 0,
@@ -151,7 +155,18 @@ const interviewReportSchema = new mongoose.Schema({
   title: {
     type: String,
     required: [true, "Title is required"]
-  }  
+  },
+  language: {
+    type: String,
+    enum: ["en", "hi", "hinglish"],
+    default: "en",
+  },
+  shareToken: {
+    type: String,
+    unique: true,
+    sparse: true,
+  },
+  mentorComments: [mentorCommentSchema],
 }, {
   timestamps: true
 })

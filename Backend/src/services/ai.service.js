@@ -88,6 +88,30 @@ const starCheckSchema = z.object({
   improvementAdvice: z.string().min(1),
 })
 
+const voiceFeedbackSchema = z.object({
+  clarity: z.number().min(0).max(100),
+  structure: z.number().min(0).max(100),
+  fillerWordCount: z.number().min(0),
+  tips: z.array(z.string()).min(1).max(5),
+})
+
+const gapAnalysisItemSchema = z.object({
+  skill: z.string(),
+  status: z.enum(["Have", "Add to resume", "Learn"]),
+  suggestion: z.string(),
+})
+
+const gapAnalysisSchema = z.object({
+  gaps: z.array(gapAnalysisItemSchema),
+})
+
+const nextQuestionSchema = z.object({
+  question: z.string(),
+  difficulty: z.enum(["Easy", "Medium", "Hard"]),
+  intention: z.string(),
+  answer: z.string(),
+})
+
 function truncate(text, max) {
   const value = String(text || "").trim()
   if (value.length <= max) return value
@@ -364,8 +388,13 @@ function parseJsonSafely(text) {
   throw new Error(`AI returned invalid JSON (${lastError?.message || "parse error"}). Please try again.`)
 }
 
-function buildPrompt({ resume, selfDescription, jobDescription, targetCompany, strict = false }) {
+function buildPrompt({ resume, selfDescription, jobDescription, targetCompany, language, strict = false }) {
   const limits = `\nRules:\n- Return ONLY one valid JSON object. No markdown, no comments, no trailing commas.\n- Use double quotes for all strings. Escape newlines inside strings as spaces.\n- technicalQuestions: exactly 5 items\n- behaviouralQuestions: exactly 5 items\n- skillGaps: 3 to 5 items (severity: low, medium, or high only)\n- preparationPlan: exactly 5 days (day 1 through 5)\n- Keep each answer under 120 words.`
+
+  const langMap = { en: "English", hi: "Hindi", hinglish: "Hinglish (a natural mix of Hindi and English)" }
+  const langInstruction = language && language !== "en"
+    ? `\nIMPORTANT: Generate ALL questions, answers, model answers, intentions, preparation plan tasks, and skill gap descriptions ENTIRELY in ${langMap[language] || "English"}. The title must also be in ${langMap[language]}. Only the matchScore and score numbers remain in numeric form.`
+    : ""
 
   const schema = `{
   "matchScore": <number 0-100>,
@@ -385,7 +414,7 @@ function buildPrompt({ resume, selfDescription, jobDescription, targetCompany, s
     ? `Target company: ${targetCompany}. Adjust the blend of behavioral vs. technical questions and the question style to match ${targetCompany}. For example, if the company is Amazon, include leadership-principles-style behavioral questions.`
     : ""
 
-  return `${strictNote}You are an expert interview coach. Generate an interview preparation report as JSON.\n\n${limits}\n\n${companyContext}\n\nSchema:\n${schema}\n\nResume:\n${truncate(resume, MAX_RESUME_CHARS)}\n\nSelf Description:\n${truncate(selfDescription, MAX_SELF_CHARS) || "Use the resume."}\n\nJob Description:\n${truncate(jobDescription, MAX_JOB_CHARS)}`
+  return `${strictNote}You are an expert interview coach. Generate an interview preparation report as JSON.\n\n${limits}\n${langInstruction}\n\n${companyContext}\n\nSchema:\n${schema}\n\nResume:\n${truncate(resume, MAX_RESUME_CHARS)}\n\nSelf Description:\n${truncate(selfDescription, MAX_SELF_CHARS) || "Use the resume."}\n\nJob Description:\n${truncate(jobDescription, MAX_JOB_CHARS)}`
 }
 
 async function buildAtsScorePrompt({ resumeText, jobDescription, targetCompany }) {
@@ -467,6 +496,7 @@ async function generateInterviewReport({
   selfDescription,
   jobDescription,
   targetCompany,
+  language,
 }) {
   if (!process.env.GOOGLE_API_KEY) {
     throw new Error("GOOGLE_API_KEY is not configured")
@@ -481,6 +511,7 @@ async function generateInterviewReport({
         selfDescription,
         jobDescription,
         targetCompany,
+        language,
         strict: attempt > 0,
       })
 
@@ -519,3 +550,154 @@ module.exports = generateInterviewReport
 module.exports.getAtsResumeScore = getAtsResumeScore
 module.exports.getStarCheckFeedback = getStarCheckFeedback
 module.exports.getDetailedAtsScore = getDetailedAtsScore
+module.exports.getVoiceFeedback = getVoiceFeedback
+module.exports.getGapAnalysis = getGapAnalysis
+module.exports.getNextQuestion = getNextQuestion
+
+// ── Feature 1: Voice Feedback ─────────────────────────────────────────────────
+async function getVoiceFeedback({ questionText, transcript }) {
+  if (!questionText || !transcript) {
+    throw new Error("questionText and transcript are required for voice feedback")
+  }
+
+  const prompt = `You are an expert interview coach evaluating a candidate's spoken answer.
+
+Analyze the transcript for clarity, structure, and delivery quality.
+Also count filler words locally — the filler words to detect are: "um", "uh", "like", "you know", "so", "basically", "actually", "right". Do NOT rely on your own count — the caller will compute fillerWordCount separately. Just focus on clarity, structure, and tips.
+
+Rules:
+- Return ONLY one valid JSON object. No markdown, no comments, no trailing commas.
+- Use double quotes for all strings.
+
+Schema:
+{
+  "clarity": <number 0-100>,
+  "structure": <number 0-100>,
+  "fillerWordCount": 0,
+  "tips": ["", "", ""]
+}
+
+The tips field should contain 2-3 concrete, actionable improvement tips specific to this answer. Be encouraging but honest.
+
+Question:
+${truncate(questionText, 1500)}
+
+Candidate's spoken answer:
+${truncate(transcript, 3000)}`
+
+  const text = await callGemini(prompt, { jsonMode: true })
+  const parsed = parseJsonSafely(text)
+
+  // Count filler words locally in code
+  const fillerPatterns = /\b(um|uh|like|you know|so|basically|actually|right)\b/gi
+  const localFillerCount = (transcript.match(fillerPatterns) || []).length
+
+  const validated = voiceFeedbackSchema.safeParse({
+    ...parsed,
+    fillerWordCount: localFillerCount,
+  })
+
+  if (!validated.success) {
+    console.error("Voice feedback validation failed:", validated.error.flatten())
+    throw new Error("AI returned an invalid voice feedback response. Please try again.")
+  }
+
+  return validated.data
+}
+
+// ── Feature 2: Gap Analysis ───────────────────────────────────────────────────
+async function getGapAnalysis({ resumeText, jobDescription }) {
+  if (!resumeText || !jobDescription) {
+    throw new Error("resumeText and jobDescription are required for gap analysis")
+  }
+
+  const prompt = `You are an expert career coach performing a resume-to-job-description gap analysis.
+
+For each missing skill or keyword, determine:
+- "Have": the candidate already demonstrates this skill in their resume
+- "Add to resume": the candidate likely has this skill but it is not reflected in the resume
+- "Learn": this is a genuine skill gap the candidate needs to develop
+
+For each item, provide a one-line actionable suggestion.
+
+Rules:
+- Return ONLY one valid JSON object. No markdown, no comments, no trailing commas.
+- Use double quotes for all strings.
+- Return 6-10 items.
+
+Schema:
+{
+  "gaps": [
+    { "skill": "", "status": "Have|Add to resume|Learn", "suggestion": "" }
+  ]
+}
+
+Resume Text:
+${truncate(resumeText, MAX_RESUME_CHARS)}
+
+Job Description:
+${truncate(jobDescription, MAX_JOB_CHARS)}`
+
+  const text = await callGemini(prompt, { jsonMode: true })
+  const parsed = parseJsonSafely(text)
+  const validated = gapAnalysisSchema.safeParse(parsed)
+
+  if (!validated.success) {
+    console.error("Gap analysis validation failed:", validated.error.flatten())
+    throw new Error("AI returned an invalid gap analysis response. Please try again.")
+  }
+
+  return validated.data
+}
+
+// ── Feature 3: Adaptive Next Question ─────────────────────────────────────────
+async function getNextQuestion({ previousQuestions, runningScore, resumeText, jobDescription }) {
+  const avgScore = runningScore
+  const difficultyHint =
+    avgScore >= 70
+      ? "The candidate is performing well. Generate a HARDER question to challenge them."
+      : avgScore >= 40
+        ? "The candidate is doing okay. Generate a MEDIUM difficulty question."
+        : "The candidate is struggling. Generate an EASIER question to build confidence."
+
+  const prevList = (previousQuestions || []).map((q, i) => `${i + 1}. [${q.difficulty || "Medium"}] ${q.question}`).join("\n")
+
+  const prompt = `You are an expert interview coach running a live adaptive interview session.
+
+${difficultyHint}
+
+Generate exactly ONE new interview question that does NOT overlap with previous questions. Mix technical and behavioural based on the resume context.
+
+Rules:
+- Return ONLY one valid JSON object. No markdown, no comments, no trailing commas.
+- Use double quotes for all strings.
+- difficulty must be Easy, Medium, or Hard.
+
+Schema:
+{
+  "question": "",
+  "difficulty": "Easy|Medium|Hard",
+  "intention": "",
+  "answer": ""
+}
+
+Previous questions (do NOT repeat these):
+${prevList || "None yet"}
+
+Resume:
+${truncate(resumeText || "", MAX_RESUME_CHARS)}
+
+Job Description:
+${truncate(jobDescription || "", MAX_JOB_CHARS)}`
+
+  const text = await callGemini(prompt, { jsonMode: true })
+  const parsed = parseJsonSafely(text)
+  const validated = nextQuestionSchema.safeParse(parsed)
+
+  if (!validated.success) {
+    console.error("Next question validation failed:", validated.error.flatten())
+    throw new Error("AI returned an invalid question. Please try again.")
+  }
+
+  return validated.data
+}

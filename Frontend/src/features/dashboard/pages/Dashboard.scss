@@ -1,0 +1,49 @@
+@use "../../../styles/theme" as *;
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.dashboard-card {
+  background: $bg-card;
+  border: 1px solid $border-color;
+  border-radius: $radius-lg;
+  padding: 1.5rem;
+  box-shadow: $shadow-card;
+
+  h3 {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: $text-soft;
+    margin-bottom: 0.75rem;
+  }
+
+  &__score {
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: $gradient-brand;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  &--chart {
+    padding: 1.5rem;
+  }
+}
+
+.dashboard-chart {
+  width: 100%;
+  height: 300px;
+}
+
+@media (max-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}

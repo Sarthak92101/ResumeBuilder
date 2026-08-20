@@ -8,6 +8,9 @@ import Protected from "./features/auth/components/Protected";
 import Dashboard from "./features/dashboard/pages/Dashboard";
 import MyResumes from "./features/resume/pages/MyResumes";
 import AtsScoreChecker from "./features/resume/pages/AtsScoreChecker";
+import VoiceInterview from "./features/interview/pages/VoiceInterview";
+import GapAnalysis from "./features/interview/pages/GapAnalysis";
+import SharedReport from "./features/interview/pages/SharedReport";
 
 export const router = createBrowserRouter([
   {
@@ -41,6 +44,18 @@ export const router = createBrowserRouter([
   {
     path: "/interview/:interviewId",
     element: <Protected><Interview /></Protected>
+  },
+  {
+    path: "/voice/:interviewId",
+    element: <Protected><VoiceInterview /></Protected>
+  },
+  {
+    path: "/gap-analysis",
+    element: <Protected><GapAnalysis /></Protected>
+  },
+  {
+    path: "/shared/:shareToken",
+    element: <SharedReport />,
   },
   {
     path: "*",

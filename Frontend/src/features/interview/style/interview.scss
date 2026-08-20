@@ -147,6 +147,8 @@
         letter-spacing: 0.1em;
         color: $text-muted;
         text-align: center;
+
+        &--mt { margin-top: 1rem; }
     }
 
     &__download-row {
@@ -543,4 +545,36 @@
         color: $text-muted;
         font-weight: 400;
     }
+}
+
+// ── Share Link ────────────────────────────────────────────────────────────────
+.voice-mock-btn {
+  text-decoration: none;
+  text-align: center;
+  justify-content: center;
+
+  &__icon {
+    vertical-align: -2px;
+    margin-right: 0.35rem;
+  }
+}
+
+.share-link-box {
+    display: flex;
+    gap: 0.35rem;
+    align-items: stretch;
+}
+
+.share-link-input {
+    flex: 1;
+    min-width: 0;
+    background: $bg-input;
+    border: 1px solid $border-color;
+    border-radius: 0.4rem;
+    padding: 0.45rem 0.6rem;
+    color: $accent;
+    font-size: 0.72rem;
+    font-family: $font-stack;
+
+    &:focus { outline: none; border-color: $border-focus; }
 } 

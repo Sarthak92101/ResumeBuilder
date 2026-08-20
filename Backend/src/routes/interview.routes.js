@@ -64,4 +64,43 @@ interviewRouter.get(
   interviewController.getInterviewStatsController
 )
 
+// ── Feature 1: Voice Feedback ─────────────────────────────────────────────────
+interviewRouter.post(
+  "/voice-feedback",
+  authMiddleware.authUser,
+  interviewController.voiceFeedbackController
+)
+
+// ── Feature 2: Gap Analysis ───────────────────────────────────────────────────
+interviewRouter.post(
+  "/gap-analysis",
+  authMiddleware.authUser,
+  interviewController.gapAnalysisController
+)
+
+// ── Feature 3: Adaptive Next Question ─────────────────────────────────────────
+interviewRouter.post(
+  "/next-question",
+  authMiddleware.authUser,
+  interviewController.nextQuestionController
+)
+
+// ── Feature 4: Mentor Share Link (public, no auth) ────────────────────────────
+interviewRouter.get(
+  "/shared/:shareToken",
+  interviewController.getSharedReportController
+)
+
+interviewRouter.post(
+  "/shared/:shareToken/comment",
+  interviewController.addMentorCommentController
+)
+
+// ── Feature 4: Share link generation (auth required) ──────────────────────────
+interviewRouter.post(
+  "/report/:interviewId/share",
+  authMiddleware.authUser,
+  interviewController.shareReportController
+)
+
 module.exports = interviewRouter

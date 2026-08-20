@@ -21,9 +21,9 @@ function formatReportUrl(reportId) {
 async function sendReminderEmail(user, report, interviewDate) {
   if (!user?.email || !report) return
 
-  const subject = `InterviewIq reminder: interview in 3 days`
-  const text = `Hi ${user.username || 'there'},\n\nThis is a friendly reminder that your interview for ${report.title || 'your target role'} is scheduled for ${new Date(interviewDate).toLocaleDateString()}.\n\nReview your plan here: ${formatReportUrl(report._id)}\n\nGood luck!\nInterviewIq Team`
-  const html = `<p>Hi ${user.username || 'there'},</p><p>This is a friendly reminder that your interview for <strong>${report.title || 'your target role'}</strong> is scheduled for <strong>${new Date(interviewDate).toLocaleDateString()}</strong>.</p><p><a href="${formatReportUrl(report._id)}">View your interview report</a></p><p>Good luck!<br/>InterviewIq Team</p>`
+  const subject = `SkillMirror reminder: interview in 3 days`
+  const text = `Hi ${user.username || 'there'},\n\nThis is a friendly reminder that your interview for ${report.title || 'your target role'} is scheduled for ${new Date(interviewDate).toLocaleDateString()}.\n\nReview your plan here: ${formatReportUrl(report._id)}\n\nGood luck!\nSkillMirror Team`
+  const html = `<p>Hi ${user.username || 'there'},</p><p>This is a friendly reminder that your interview for <strong>${report.title || 'your target role'}</strong> is scheduled for <strong>${new Date(interviewDate).toLocaleDateString()}</strong>.</p><p><a href="${formatReportUrl(report._id)}">View your interview report</a></p><p>Good luck!<br/>SkillMirror Team</p>`
 
   await transporter.sendMail({
     from: process.env.EMAIL_FROM,
@@ -76,7 +76,7 @@ async function runReminderJob() {
 function startReminderScheduler() {
   // Runs once a day at 08:30 server time
   cron.schedule('30 8 * * *', () => {
-    console.log('Running InterviewIq reminder job...')
+    console.log('Running SkillMirror reminder job...')
     runReminderJob()
   })
 }

@@ -11,6 +11,7 @@ const Home = () => {
     const [ selfDescription, setSelfDescription ] = useState("")
     const [ targetCompany, setTargetCompany ] = useState("")
     const [ interviewDate, setInterviewDate ] = useState("")
+    const [ language, setLanguage ] = useState("en")
     const [ error, setError ] = useState("")
     const [ selectedFileName, setSelectedFileName ] = useState("")
     const resumeInputRef = useRef()
@@ -63,6 +64,7 @@ const Home = () => {
                 resumeFile,
                 targetCompany,
                 interviewDate,
+                language,
             })
             navigate(`/interview/${data._id}`)
         } catch (err) {
@@ -113,7 +115,7 @@ const Home = () => {
                             placeholder={`Paste the full job description here...\ne.g. 'Senior Frontend Engineer at Google requires proficiency in React, TypeScript, and large-scale system design...'`}
                             maxLength={5000}
                         />
-                        <div className='char-counter'>0 / 5000 chars</div>
+                        <div className='char-counter'>{jobDescription.length} / 5000 chars</div>
                     </div>
 
                     {/* Vertical Divider */}
@@ -149,7 +151,7 @@ const Home = () => {
                                     accept='.pdf'
                                     onChange={handleFileSelect}
                                 />
-                                {selectedFileName && <p style={{marginTop: '10px', fontSize: '14px', color: '#4CAF50'}}><strong>✓ {selectedFileName}</strong></p>}
+                                {selectedFileName && <p className='dropzone__selected-name'><strong>{selectedFileName}</strong></p>}
                             </label>
                         </div>
 
@@ -178,6 +180,27 @@ const Home = () => {
                             />
                         </div>
 
+                        {/* Language Toggle */}
+                        <div className='company-meta'>
+                            <label className='section-label'>Language</label>
+                            <div className='language-toggle'>
+                                {[
+                                    { value: 'en', label: 'English' },
+                                    { value: 'hi', label: 'Hindi' },
+                                    { value: 'hinglish', label: 'Hinglish' },
+                                ].map(opt => (
+                                    <button
+                                        key={opt.value}
+                                        type='button'
+                                        className={`language-toggle__btn ${language === opt.value ? 'language-toggle__btn--active' : ''}`}
+                                        onClick={() => setLanguage(opt.value)}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
                         {/* Quick Self-Description */}
                         <div className='self-description'>
                             <label className='section-label' htmlFor='selfDescription'>Quick Self-Description</label>
@@ -201,7 +224,7 @@ const Home = () => {
                 </div>
 
             <div className='interview-card__footer'>
-                {error && <div style={{ color: 'red', marginBottom: '10px', fontSize: '14px' }}>{error}</div>}
+                {error && <div className='home-error'>{error}</div>}
                 <span className='footer-info'>AI-Powered Strategy Generation &bull; Approx 30s</span>
                 <button
                     onClick={handleGenerateReport}

@@ -12,6 +12,7 @@ export const generateInterviewReport = async ({
   resumeId,
   targetCompany,
   interviewDate,
+  language,
 }) => {
   if (resumeId) {
     const response = await api.post('/api/interview/', {
@@ -20,6 +21,7 @@ export const generateInterviewReport = async ({
       resumeId,
       targetCompany,
       interviewDate,
+      language,
     })
     return response.data
   }
@@ -27,6 +29,7 @@ export const generateInterviewReport = async ({
   const formData = new FormData()
   formData.append("jobDescription", jobDescription)
   formData.append("selfDescription", selfDescription || "")
+  formData.append("language", language || "en")
   if (targetCompany) {
     formData.append("targetCompany", targetCompany)
   }
@@ -84,5 +87,54 @@ export const generateResumePdf = async ({ interviewReportId, type = "resume" }) 
       responseType: "blob",
     }
   )
+  return response.data
+}
+
+// ── Feature 1: Voice Feedback ─────────────────────────────────────────────────
+export const getVoiceFeedback = async ({ questionText, transcript }) => {
+  const response = await api.post('/api/interview/voice-feedback', {
+    questionText,
+    transcript,
+  })
+  return response.data
+}
+
+// ── Feature 2: Gap Analysis ───────────────────────────────────────────────────
+export const getGapAnalysis = async ({ resumeId, resumeText, jobDescription }) => {
+  const response = await api.post('/api/interview/gap-analysis', {
+    resumeId,
+    resumeText,
+    jobDescription,
+  })
+  return response.data
+}
+
+// ── Feature 3: Adaptive Next Question ─────────────────────────────────────────
+export const getNextQuestion = async ({ previousQuestions, runningScore, resumeText, jobDescription }) => {
+  const response = await api.post('/api/interview/next-question', {
+    previousQuestions,
+    runningScore,
+    resumeText,
+    jobDescription,
+  })
+  return response.data
+}
+
+// ── Feature 4: Share & Comments ───────────────────────────────────────────────
+export const shareReport = async (interviewId) => {
+  const response = await api.post(`/api/interview/report/${interviewId}/share`)
+  return response.data
+}
+
+export const getSharedReport = async (shareToken) => {
+  const response = await api.get(`/api/interview/shared/${shareToken}`)
+  return response.data
+}
+
+export const addMentorComment = async (shareToken, { author, text }) => {
+  const response = await api.post(`/api/interview/shared/${shareToken}/comment`, {
+    author,
+    text,
+  })
   return response.data
 }

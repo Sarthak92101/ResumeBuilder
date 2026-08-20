@@ -13,7 +13,7 @@ const About = () => {
           <p className="about-hero__eyebrow">About me</p>
 
           <h1>
-            <span className="highlight">Resume Maker</span>
+            <span className="highlight">SkillMirror</span>
           </h1>
 
           <p className="about-hero__role">AI Interview Preparation Tool</p>
