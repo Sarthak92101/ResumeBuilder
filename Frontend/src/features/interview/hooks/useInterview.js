@@ -12,6 +12,8 @@ import {
   getGapAnalysis,
   getNextQuestion,
   shareReport,
+  getGitHubSummary,
+  getLeetCodeSummary,
 } from "../services/interview.api"
 
 export const useInterview = () => {
@@ -22,10 +24,10 @@ export const useInterview = () => {
     throw new Error("useInterview must be used within an InterviewProvider")
   }
 
-  const { loading, setLoading, report, setReport, reports, setReports } = context
+  const { loading, setLoading, report, setReport, reports, setReports, lastWarnings, setLastWarnings } = context
 
   const generateReport = useCallback(
-    async ({ jobDescription, selfDescription, resumeFile, targetCompany, interviewDate, language }) => {
+    async ({ jobDescription, selfDescription, resumeFile, targetCompany, interviewDate, language, githubUsername, leetcodeUsername }) => {
       setLoading(true)
       try {
         const response = await generateInterviewReport({
@@ -35,15 +37,38 @@ export const useInterview = () => {
           targetCompany,
           interviewDate,
           language,
+          githubUsername,
+          leetcodeUsername,
         })
         setReport(response.interviewReport)
+        setLastWarnings(response.warnings || [])
         return response.interviewReport
       } finally {
         setLoading(false)
       }
     },
-    [setLoading, setReport]
+    [setLoading, setReport, setLastWarnings]
   )
+
+  const fetchGitHubProfile = useCallback(async (username) => {
+    try {
+      const response = await getGitHubSummary(username)
+      return response.success ? response.summary : null
+    } catch (error) {
+      console.error("GitHub preview fetch failed:", error.message)
+      return null
+    }
+  }, [])
+
+  const fetchLeetCodeProfile = useCallback(async (username) => {
+    try {
+      const response = await getLeetCodeSummary(username)
+      return response.success ? response.summary : null
+    } catch (error) {
+      console.error("LeetCode preview fetch failed:", error.message)
+      return null
+    }
+  }, [])
 
   const getReportById = useCallback(
     async (id) => {
@@ -150,6 +175,7 @@ export const useInterview = () => {
     loading,
     report,
     reports,
+    lastWarnings,
     generateReport,
     getReportById,
     getReports,
@@ -160,5 +186,7 @@ export const useInterview = () => {
     requestGapAnalysis,
     requestNextQuestion,
     shareInterviewReport,
+    fetchGitHubProfile,
+    fetchLeetCodeProfile,
   }
 }

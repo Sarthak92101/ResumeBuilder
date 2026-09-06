@@ -13,6 +13,8 @@ export const generateInterviewReport = async ({
   targetCompany,
   interviewDate,
   language,
+  githubUsername,
+  leetcodeUsername,
 }) => {
   if (resumeId) {
     const response = await api.post('/api/interview/', {
@@ -22,6 +24,8 @@ export const generateInterviewReport = async ({
       targetCompany,
       interviewDate,
       language,
+      githubUsername: githubUsername || '',
+      leetcodeUsername: leetcodeUsername || '',
     })
     return response.data
   }
@@ -36,6 +40,12 @@ export const generateInterviewReport = async ({
   if (interviewDate) {
     formData.append("interviewDate", interviewDate)
   }
+  if (githubUsername) {
+    formData.append("githubUsername", githubUsername)
+  }
+  if (leetcodeUsername) {
+    formData.append("leetcodeUsername", leetcodeUsername)
+  }
 
   if (resumeFile) {
     formData.append("resume", resumeFile)
@@ -44,6 +54,17 @@ export const generateInterviewReport = async ({
   const response = await api.post("/api/interview/", formData, {
     headers: { "Content-Type": "multipart/form-data" },
   })
+  return response.data
+}
+
+// ── Developer profile previews (GitHub / LeetCode) ───────────────────────────
+export const getGitHubSummary = async (username) => {
+  const response = await api.get(`/api/github/${encodeURIComponent(username)}`)
+  return response.data
+}
+
+export const getLeetCodeSummary = async (username) => {
+  const response = await api.get(`/api/leetcode/${encodeURIComponent(username)}`)
   return response.data
 }
 

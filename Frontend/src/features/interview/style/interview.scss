@@ -44,10 +44,29 @@
     color: $text-primary;
     font-family: $font-stack;
     display: flex;
+    flex-direction: column;
     align-items: stretch;
     width: 100%;
     max-width: 1280px;
     box-sizing: border-box;
+}
+
+.report-warnings {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.6rem 0.9rem;
+    background: rgba($accent-secondary, 0.1);
+    border: 1px solid rgba($accent-secondary, 0.3);
+    border-radius: $radius-lg;
+    color: $accent-secondary;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    margin-bottom: 0.75rem;
+
+    p {
+        margin: 0;
+    }
 }
 
 // ── 3-Column Layout ───────────────────────────────────────────────────────────

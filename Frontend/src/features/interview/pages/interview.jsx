@@ -86,7 +86,7 @@ const RoadMapDay = ({ day }) => (
 // ── Main Component ────────────────────────────────────────────────────────────
 const Interview = () => {
     const [ activeNav, setActiveNav ] = useState('technical')
-    const { report, loading, getResumePdf } = useInterview()
+    const { report, loading, getResumePdf, lastWarnings } = useInterview()
     const { interviewId } = useParams()
     const [ pdfLoading, setPdfLoading ] = useState(false)
     const [shareLoading, setShareLoading] = useState(false)
@@ -136,6 +136,11 @@ const Interview = () => {
         <div className='interview-page-wrap'>
             <AppNavbar />
         <div className='interview-page'>
+            {lastWarnings?.length > 0 && (
+                <div className='report-warnings'>
+                    {lastWarnings.map((warning, i) => <p key={i}>{warning}</p>)}
+                </div>
+            )}
             <div className='interview-layout'>
 
                 {/* ── Left Nav ── */}

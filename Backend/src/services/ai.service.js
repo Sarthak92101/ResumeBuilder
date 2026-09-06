@@ -388,7 +388,50 @@ function parseJsonSafely(text) {
   throw new Error(`AI returned invalid JSON (${lastError?.message || "parse error"}). Please try again.`)
 }
 
-function buildPrompt({ resume, selfDescription, jobDescription, targetCompany, language, strict = false }) {
+function buildProfileContext({ githubSummary, leetcodeSummary }) {
+  const sections = []
+
+  const repos = (githubSummary?.repos || []).filter(
+    (repo) => repo && (repo.name || repo.description || repo.language)
+  )
+
+  if (repos.length) {
+    const repoLines = repos
+      .map((repo, index) => {
+        const meta = [repo.language, repo.stars ? `${repo.stars} stars` : null]
+          .filter(Boolean)
+          .join(", ")
+        const readme = repo.readmeSummary ? ` Summary: ${repo.readmeSummary}` : ""
+        return `${index + 1}. ${repo.name} (${meta || "no metadata"})${repo.description ? ` — ${repo.description}` : ""}${readme}`
+      })
+      .join("\n")
+
+    sections.push(
+      `\n\nDeveloper GitHub profile — the candidate's real public repositories:\n${repoLines}\n\n` +
+      `Make AT LEAST 2 of the 5 technicalQuestions specifically about these real repositories (not the resume or job description): ask about architecture choices, why a particular language/library was used, how a feature is implemented, or how a problem in the codebase was solved. Keep these distinct from generic resume-based questions and reference the actual repo names. Also factor the candidate's GitHub activity (number of repos, languages, stars) into the score — a candidate with substantial open-source work should score slightly higher, while an empty/minimal profile should not improve it.`
+    )
+  }
+
+  if (leetcodeSummary && leetcodeSummary.totalSolved >= 0) {
+    const topics = (leetcodeSummary.topTopics || [])
+      .map((topic) => `${topic.tag} (${topic.solved} solved)`)
+      .join(", ")
+
+    sections.push(
+      `\n\nCandidate's LeetCode (DSA) profile:\n` +
+      `Total solved: ${leetcodeSummary.totalSolved || 0} (Easy: ${leetcodeSummary.easy || 0}, Medium: ${leetcodeSummary.medium || 0}, Hard: ${leetcodeSummary.hard || 0})\n` +
+      `Top topics: ${topics || "none reported"}\n\n` +
+      `Balance the DSA/data-structures technicalQuestions across TWO goals:\n` +
+      `1. Probe WEAK areas — ask about topics where the candidate has LOW solved counts (or topics absent/lower in the top list) to uncover gaps, and mention this explicitly by referencing the topic name.\n` +
+      `2. Verify depth — include AT LEAST ONE technicalQuestion on the candidate's STRONGEST topic (highest solved count) phrased as a deeper, follow-up style question.\n` +
+      `Also factor the candidate's total solved count into the score: more accepted solutions and a healthy Easy/Medium/Hard spread should raise it moderately, while a very low count or only easy solves should cap it.`
+    )
+  }
+
+  return sections.join("\n")
+}
+
+function buildPrompt({ resume, selfDescription, jobDescription, targetCompany, language, githubSummary, leetcodeSummary, strict = false }) {
   const limits = `\nRules:\n- Return ONLY one valid JSON object. No markdown, no comments, no trailing commas.\n- Use double quotes for all strings. Escape newlines inside strings as spaces.\n- technicalQuestions: exactly 5 items\n- behaviouralQuestions: exactly 5 items\n- skillGaps: 3 to 5 items (severity: low, medium, or high only)\n- preparationPlan: exactly 5 days (day 1 through 5)\n- Keep each answer under 120 words.`
 
   const langMap = { en: "English", hi: "Hindi", hinglish: "Hinglish (a natural mix of Hindi and English)" }
@@ -414,7 +457,9 @@ function buildPrompt({ resume, selfDescription, jobDescription, targetCompany, l
     ? `Target company: ${targetCompany}. Adjust the blend of behavioral vs. technical questions and the question style to match ${targetCompany}. For example, if the company is Amazon, include leadership-principles-style behavioral questions.`
     : ""
 
-  return `${strictNote}You are an expert interview coach. Generate an interview preparation report as JSON.\n\n${limits}\n${langInstruction}\n\n${companyContext}\n\nSchema:\n${schema}\n\nResume:\n${truncate(resume, MAX_RESUME_CHARS)}\n\nSelf Description:\n${truncate(selfDescription, MAX_SELF_CHARS) || "Use the resume."}\n\nJob Description:\n${truncate(jobDescription, MAX_JOB_CHARS)}`
+  const profileContext = buildProfileContext({ githubSummary, leetcodeSummary })
+
+  return `${strictNote}You are an expert interview coach. Generate an interview preparation report as JSON.\n\n${limits}\n${langInstruction}\n\n${companyContext}${profileContext}\n\nSchema:\n${schema}\n\nResume:\n${truncate(resume, MAX_RESUME_CHARS)}\n\nSelf Description:\n${truncate(selfDescription, MAX_SELF_CHARS) || "Use the resume."}\n\nJob Description:\n${truncate(jobDescription, MAX_JOB_CHARS)}`
 }
 
 async function buildAtsScorePrompt({ resumeText, jobDescription, targetCompany }) {
@@ -497,6 +542,8 @@ async function generateInterviewReport({
   jobDescription,
   targetCompany,
   language,
+  githubSummary = null,
+  leetcodeSummary = null,
 }) {
   if (!process.env.GOOGLE_API_KEY) {
     throw new Error("GOOGLE_API_KEY is not configured")
@@ -512,6 +559,8 @@ async function generateInterviewReport({
         jobDescription,
         targetCompany,
         language,
+        githubSummary,
+        leetcodeSummary,
         strict: attempt > 0,
       })
 

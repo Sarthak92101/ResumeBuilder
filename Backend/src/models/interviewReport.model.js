@@ -167,6 +167,14 @@ const interviewReportSchema = new mongoose.Schema({
     sparse: true,
   },
   mentorComments: [mentorCommentSchema],
+  githubSummary: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null,
+  },
+  leetcodeSummary: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null,
+  },
 }, {
   timestamps: true
 })

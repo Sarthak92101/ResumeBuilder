@@ -5,6 +5,8 @@ const {
   generateInterviewPlanPdf,
 } = require("../services/pdfExport.service")
 const interviewReportModel = require("../models/interviewReport.model")
+const { fetchGitHubSummary } = require("../services/github.service")
+const { fetchLeetCodeSummary } = require("../services/leetcode.service")
 const crypto = require("crypto")
 
 async function generateInterviewReportController(req, res) {
@@ -14,6 +16,8 @@ async function generateInterviewReportController(req, res) {
     const targetCompany = req.body?.targetCompany?.trim() || ""
     const interviewDate = req.body?.interviewDate ? new Date(req.body.interviewDate) : null
     const language = req.body?.language || "en"
+    const githubUsername = req.body?.githubUsername?.trim() || ""
+    const leetcodeUsername = req.body?.leetcodeUsername?.trim() || ""
 
     if (!jobDescription) {
       return res.status(400).json({
@@ -59,12 +63,38 @@ async function generateInterviewReportController(req, res) {
       console.log("PDF parsed successfully, text length:", resumeText.length)
     }
 
+    // Fetch optional developer profiles gracefully — a third-party API failure
+    // must never block or crash the report generation flow.
+    const warnings = []
+    let githubSummary = null
+    let leetcodeSummary = null
+
+    if (githubUsername) {
+      try {
+        githubSummary = await fetchGitHubSummary(githubUsername)
+      } catch (error) {
+        console.warn("GitHub profile fetch failed:", error.message)
+        warnings.push(`Couldn't fetch GitHub data for "${githubUsername}", continuing with resume only.`)
+      }
+    }
+
+    if (leetcodeUsername) {
+      try {
+        leetcodeSummary = await fetchLeetCodeSummary(leetcodeUsername)
+      } catch (error) {
+        console.warn("LeetCode profile fetch failed:", error.message)
+        warnings.push(`Couldn't fetch LeetCode data for "${leetcodeUsername}", continuing with resume only.`)
+      }
+    }
+
     const interviewReportByAi = await generateInterviewReport({
       resume: resumeText,
       selfDescription: selfDescription || resumeText,
       jobDescription,
       targetCompany,
       language,
+      githubSummary,
+      leetcodeSummary,
     })
 
     const interviewReport = await interviewReportModel.create({
@@ -82,11 +112,14 @@ async function generateInterviewReportController(req, res) {
       behaviouralQuestions: interviewReportByAi.behaviouralQuestions,
       skillGaps: interviewReportByAi.skillGaps,
       preparationPlan: interviewReportByAi.preparationPlan,
+      githubSummary,
+      leetcodeSummary,
     })
 
     res.status(201).json({
       message: "Interview report generated successfully",
       interviewReport,
+      warnings,
     })
   } catch (error) {
     console.error("Generate Interview Report Error:", error.message)
