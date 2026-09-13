@@ -31,6 +31,13 @@ const mongoose = require("mongoose");
  *                    }]
  */
 
+const testCaseSchema = new mongoose.Schema({
+  input: { type: String },
+  expectedOutput: { type: String },
+}, {
+  _id: false,
+})
+
 const technicalQuestionSchema = new mongoose.Schema({
   question: {
     type: String,
@@ -49,9 +56,15 @@ const technicalQuestionSchema = new mongoose.Schema({
     type: String,
     required: [true, "Answer is required"]
   },
+  isCoding: {
+    type: Boolean,
+    default: false,
+  },
+  testCases: {
+    type: [testCaseSchema],
+    default: [],
+  },
 
-}, {
-  _id: false
 })
 
 
@@ -74,8 +87,6 @@ const BehaviouralQuestionSchema = new mongoose.Schema({
     required: [true, "Answer is required"]
   },
 
-}, {
-  _id: false
 })
 
 const skillGapSchema = new mongoose.Schema({
@@ -172,6 +183,10 @@ const interviewReportSchema = new mongoose.Schema({
     default: null,
   },
   leetcodeSummary: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null,
+  },
+  codeforcesSummary: {
     type: mongoose.Schema.Types.Mixed,
     default: null,
   },

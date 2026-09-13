@@ -2,6 +2,7 @@ import React, { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../hooks/useAuth"
 import AuthLayout from "../components/AuthLayout"
+import { Button, Input } from '../../../components/ui'
 
 const Login = () => {
   const { loading, handleLogin } = useAuth()
@@ -31,42 +32,17 @@ const Login = () => {
 
   return (
     <AuthLayout title="Welcome back" subtitle="Sign in to your account">
-      <form className="auth-form" onSubmit={handleSubmit}>
-        {error && <div className="auth-error">{error}</div>}
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+        {error && <div style={{ padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', background: 'rgba(229,72,77,0.08)', color: 'var(--color-danger)', border: '1px solid rgba(229,72,77,0.2)' }}>{error}</div>}
 
-        <div className="input-group">
-          <label htmlFor="email">Email</label>
-          <input
-            onChange={(e) => setEmail(e.target.value)}
-            type="email"
-            name="email"
-            id="email"
-            placeholder="you@example.com"
-            required
-            autoComplete="email"
-          />
-        </div>
+        <Input label="Email" type="email" name="email" id="email" placeholder="you@example.com" required autoComplete="email" onChange={(e) => setEmail(e.target.value)} />
+        <Input label="Password" type="password" name="password" id="password" placeholder="Enter your password" required autoComplete="current-password" onChange={(e) => setPassword(e.target.value)} />
 
-        <div className="input-group">
-          <label htmlFor="password">Password</label>
-          <input
-            onChange={(e) => setPassword(e.target.value)}
-            type="password"
-            name="password"
-            id="password"
-            placeholder="Enter your password"
-            required
-            autoComplete="current-password"
-          />
-        </div>
-
-        <button type="submit" className="button primary-button auth-submit">
-          Sign in
-        </button>
+        <Button type="submit" variant="primary" size="lg" style={{ width: '100%' }}>Sign in</Button>
       </form>
 
-      <p className="auth-footer">
-        Don&apos;t have an account? <Link to="/register">Create one</Link>
+      <p style={{ marginTop: 'var(--space-5)', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
+        Don&apos;t have an account? <Link to="/register" style={{ color: 'var(--color-accent)', fontWeight: 600, textDecoration: 'none' }}>Create one</Link>
       </p>
     </AuthLayout>
   )

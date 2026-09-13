@@ -14,6 +14,9 @@ import {
   shareReport,
   getGitHubSummary,
   getLeetCodeSummary,
+  getCodeforcesSummary,
+  runUserCode,
+  checkGrammar,
 } from "../services/interview.api"
 
 export const useInterview = () => {
@@ -27,18 +30,20 @@ export const useInterview = () => {
   const { loading, setLoading, report, setReport, reports, setReports, lastWarnings, setLastWarnings } = context
 
   const generateReport = useCallback(
-    async ({ jobDescription, selfDescription, resumeFile, targetCompany, interviewDate, language, githubUsername, leetcodeUsername }) => {
+    async ({ jobDescription, selfDescription, resumeFile, resumeId, targetCompany, interviewDate, language, githubUsername, leetcodeUsername, codeforcesHandle }) => {
       setLoading(true)
       try {
         const response = await generateInterviewReport({
           jobDescription,
           selfDescription,
           resumeFile,
+          resumeId,
           targetCompany,
           interviewDate,
           language,
           githubUsername,
           leetcodeUsername,
+          codeforcesHandle,
         })
         setReport(response.interviewReport)
         setLastWarnings(response.warnings || [])
@@ -66,6 +71,17 @@ export const useInterview = () => {
       return response.success ? response.summary : null
     } catch (error) {
       console.error("LeetCode preview fetch failed:", error.message)
+      return null
+    }
+  }, [])
+
+  const fetchCodeforcesProfile = useCallback(async (handle) => {
+    if (!handle?.trim()) return null
+    try {
+      const response = await getCodeforcesSummary(handle)
+      return response.success ? response.summary : null
+    } catch (error) {
+      console.error("Codeforces preview fetch failed:", error.message)
       return null
     }
   }, [])
@@ -155,6 +171,22 @@ export const useInterview = () => {
     []
   )
 
+  const executeUserCode = useCallback(
+    async ({ code, language, questionId }) => {
+      const response = await runUserCode({ code, language, questionId })
+      return response
+    },
+    []
+  )
+
+  const runGrammarCheck = useCallback(
+    async (text) => {
+      const response = await checkGrammar({ text })
+      return response
+    },
+    []
+  )
+
   const shareInterviewReport = useCallback(
     async (interviewId) => {
       const response = await shareReport(interviewId)
@@ -185,8 +217,11 @@ export const useInterview = () => {
     requestVoiceFeedback,
     requestGapAnalysis,
     requestNextQuestion,
+    executeUserCode,
+    runGrammarCheck,
     shareInterviewReport,
     fetchGitHubProfile,
     fetchLeetCodeProfile,
+    fetchCodeforcesProfile,
   }
 }

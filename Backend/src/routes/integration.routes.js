@@ -16,4 +16,10 @@ integrationRouter.get(
   integrationController.getLeetCodeProfileController
 )
 
+integrationRouter.get(
+  "/codeforces/:handle",
+  authMiddleware.authUser,
+  integrationController.getCodeforcesProfileController
+)
+
 module.exports = integrationRouter

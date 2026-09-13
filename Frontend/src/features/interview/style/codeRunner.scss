@@ -1,0 +1,142 @@
+@use "../../../styles/theme" as *;
+
+.code-runner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+
+  &__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  &__lang {
+    background: $bg-input;
+    border: 1px solid $border-color;
+    border-radius: 0.4rem;
+    color: $text-primary;
+    font-family: $font-stack;
+    font-size: 0.8rem;
+    padding: 0.4rem 0.6rem;
+
+    &:focus {
+      outline: none;
+      border-color: $border-focus;
+    }
+  }
+
+  &__editor {
+    border: 1px solid $border-color;
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+
+  &__error {
+    padding: 0.65rem 1rem;
+    background: rgba($danger, 0.1);
+    border: 1px solid rgba($danger, 0.25);
+    border-radius: 0.5rem;
+    color: $danger;
+    font-size: 0.8rem;
+    font-weight: 500;
+    line-height: 1.5;
+  }
+
+  &__results {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__summary {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: $text-primary;
+  }
+
+  &__case {
+    border: 1px solid $border-color;
+    border-radius: 0.5rem;
+    overflow: hidden;
+
+    &--pass {
+      border-color: rgba($severity-low, 0.4);
+
+      .code-runner__case-status { color: $severity-low; }
+    }
+
+    &--fail {
+      border-color: rgba($severity-high, 0.4);
+
+      .code-runner__case-status { color: $severity-high; }
+    }
+  }
+
+  &__case-head {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0.75rem;
+    background: $bg-panel;
+  }
+
+  &__case-status {
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+  }
+
+  &__case-label {
+    font-size: 0.72rem;
+    color: $text-muted;
+    font-weight: 600;
+  }
+
+  &__case-time {
+    margin-left: auto;
+    font-size: 0.68rem;
+    color: $text-soft;
+  }
+
+  &__case-body {
+    padding: 0.55rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  &__case-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+
+  &__case-key {
+    flex-shrink: 0;
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: $text-soft;
+    width: 58px;
+    padding-top: 0.25rem;
+  }
+
+  &__case-val {
+    margin: 0;
+    flex: 1;
+    font-size: 0.76rem;
+    color: $text-primary;
+    background: $bg-input;
+    border: 1px solid $border-color;
+    border-radius: 0.35rem;
+    padding: 0.35rem 0.5rem;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+}

@@ -114,6 +114,65 @@
   border-radius: 0.3rem;
 }
 
+.voice-tts {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.voice-tts-btn {
+  background: $bg-panel;
+  border: 1px solid $border-color;
+  border-radius: 0.35rem;
+  color: $text-muted;
+  font-family: $font-stack;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+
+  &:hover {
+    border-color: $accent;
+    color: $accent;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.voice-tts-toggle {
+  background: $bg-panel;
+  border: 1px solid $border-color;
+  border-radius: 0.35rem;
+  color: $text-muted;
+  font-family: $font-stack;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+
+  &:hover {
+    border-color: $accent;
+    color: $accent;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  &--muted {
+    color: $severity-high;
+    border-color: rgba($severity-high, 0.35);
+  }
+}
+
 .voice-question-text {
   font-size: 1.05rem;
   color: $text-primary;
@@ -141,35 +200,7 @@
 }
 
 .voice-record-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.8rem 1.6rem;
-  border: none;
-  border-radius: 0.5rem;
-  font-family: $font-stack;
-  font-size: 0.88rem;
-  font-weight: 700;
-  cursor: pointer;
-  background: $bg-card;
-  color: $severity-high;
-  border: 1px solid rgba($severity-high, 0.35);
-  transition: all 0.2s;
-  box-shadow: 0 2px 12px rgba($severity-high, 0.15);
-
-  &:hover {
-    background: rgba($severity-high, 0.12);
-    box-shadow: 0 4px 20px rgba($severity-high, 0.25);
-    transform: translateY(-1px);
-  }
-
-  &__dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: $severity-high;
-    animation: dotPulse 1.2s ease-in-out infinite;
-  }
+  min-width: 172px;
 }
 
 @keyframes dotPulse {
@@ -178,33 +209,13 @@
 }
 
 .voice-stop-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.8rem 1.6rem;
-  border: none;
-  border-radius: 0.5rem;
-  font-family: $font-stack;
-  font-size: 0.88rem;
-  font-weight: 700;
-  cursor: pointer;
-  background: $severity-high;
-  color: #fff;
-  border: 1px solid $severity-high;
-  transition: all 0.2s;
-  box-shadow: 0 2px 12px rgba($severity-high, 0.3);
+  min-width: 172px;
 
-  &:hover {
-    filter: brightness(1.1);
-    box-shadow: 0 4px 20px rgba($severity-high, 0.4);
-    transform: translateY(-1px);
-  }
-
-  &__square {
+  .voice-stop-btn__square {
     width: 11px;
     height: 11px;
     border-radius: 2px;
-    background: #fff;
+    background: currentColor;
   }
 }
 
@@ -279,7 +290,8 @@
   display: flex;
   gap: 0.5rem;
 
-  .button { flex: 1; }
+  .button,
+  .ui-button { flex: 1; }
 }
 
 .voice-error {

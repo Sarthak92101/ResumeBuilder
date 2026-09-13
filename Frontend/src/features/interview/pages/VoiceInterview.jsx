@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { useInterview } from '../hooks/useInterview.js'
 import { getVoiceFeedback } from '../services/interview.api'
 import AppNavbar from '../../../components/AppNavbar'
+import { Button } from '../../../components/ui'
 import '../style/voice.scss'
 
 const FILLER_WORDS = /\b(um|uh|like|you know|so|basically|actually|right)\b/gi
@@ -25,8 +26,12 @@ const VoiceInterview = () => {
   const [feedbackLoading, setFeedbackLoading] = useState(false)
   const [error, setError] = useState('')
   const [history, setHistory] = useState([])
+  const [muted, setMuted] = useState(false)
 
   const recognitionRef = useRef(null)
+  const utteranceRef = useRef(null)
+
+  const speechSupported = typeof window !== 'undefined' && typeof window.speechSynthesis !== 'undefined'
 
   const allQuestions = [
     ...(report?.technicalQuestions || []),
@@ -34,6 +39,31 @@ const VoiceInterview = () => {
   ]
 
   const currentQuestion = allQuestions[activeQ]
+
+  const ttsLang = report?.language === 'hi' || report?.language === 'hinglish' ? 'hi-IN' : 'en-US'
+
+  const speakQuestion = useCallback((question) => {
+    if (!speechSupported || !question) return
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(question)
+    utterance.lang = ttsLang
+    utterance.rate = 1
+    utteranceRef.current = utterance
+    window.speechSynthesis.speak(utterance)
+  }, [ttsLang, speechSupported])
+
+  const cancelSpeech = useCallback(() => {
+    if (speechSupported) {
+      window.speechSynthesis.cancel()
+    }
+  }, [speechSupported])
+
+  // Read each question aloud when it appears (unless muted or unsupported).
+  useEffect(() => {
+    if (muted || !currentQuestion?.question) return
+    speakQuestion(currentQuestion.question)
+    return cancelSpeech
+  }, [activeQ, muted, currentQuestion, speakQuestion, cancelSpeech])
 
   const startRecording = useCallback(() => {
     if (!SpeechRecognition) {
@@ -149,8 +179,9 @@ const VoiceInterview = () => {
       if (recognitionRef.current) {
         recognitionRef.current.stop()
       }
+      cancelSpeech()
     }
-  }, [])
+  }, [cancelSpeech])
 
   if (loading || !report) {
     return (
@@ -194,6 +225,26 @@ const VoiceInterview = () => {
                   {currentQuestion.difficulty || 'Medium'}
                 </span>
                 <span className='voice-q-number'>Q{activeQ + 1}</span>
+                <div className='voice-tts'>
+                  <button
+                    type='button'
+                    className='voice-tts-btn'
+                    onClick={() => speakQuestion(currentQuestion.question)}
+                    disabled={!speechSupported}
+                    title='Replay question'
+                  >
+                    🔊 Replay question
+                  </button>
+                  <button
+                    type='button'
+                    className={`voice-tts-toggle ${muted ? 'voice-tts-toggle--muted' : ''}`}
+                    onClick={() => setMuted(m => !m)}
+                    disabled={!speechSupported}
+                    title={muted ? 'Turn auto-read on' : 'Turn auto-read off'}
+                  >
+                    {muted ? '🔇 Muted' : '🔊 Auto-read'}
+                  </button>
+                </div>
               </div>
               <h2 className='voice-question-text'>{currentQuestion.question}</h2>
               {currentQuestion.intention && (
@@ -206,15 +257,20 @@ const VoiceInterview = () => {
             {/* Recording Controls */}
             <div className='voice-controls'>
               {!isRecording ? (
-                <button onClick={startRecording} className='voice-record-btn'>
-                  <span className='voice-record-btn__dot' />
+                <Button onClick={startRecording} variant='primary' size='lg' className='voice-record-btn'>
+                  <svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round' aria-hidden='true'>
+                    <rect x='9' y='2' width='6' height='12' rx='3' />
+                    <path d='M5 11a7 7 0 0 0 14 0' />
+                    <line x1='12' y1='18' x2='12' y2='22' />
+                    <line x1='8' y1='22' x2='16' y2='22' />
+                  </svg>
                   Start Recording
-                </button>
+                </Button>
               ) : (
-                <button onClick={stopRecording} className='voice-stop-btn'>
+                <Button onClick={stopRecording} variant='danger' size='lg' className='voice-stop-btn'>
                   <span className='voice-stop-btn__square' />
                   Stop Recording
-                </button>
+                </Button>
               )}
 
               {isRecording && (
@@ -244,27 +300,27 @@ const VoiceInterview = () => {
 
             {/* Submit / Nav */}
             <div className='voice-actions'>
-              <button
+              <Button
                 onClick={goPrev}
                 disabled={activeQ === 0}
-                className='button secondary-button'
+                variant='secondary'
               >
                 Previous
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={submitAnswer}
                 disabled={!transcript.trim() || feedbackLoading}
-                className='button primary-button'
+                variant='primary'
               >
                 {feedbackLoading ? 'Analyzing...' : 'Get Feedback'}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={goNext}
                 disabled={activeQ >= allQuestions.length - 1}
-                className='button secondary-button'
+                variant='secondary'
               >
                 Next Question
-              </button>
+              </Button>
             </div>
 
             {error && <div className='voice-error'>{error}</div>}

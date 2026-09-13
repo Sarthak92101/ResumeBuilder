@@ -176,7 +176,8 @@
         gap: 0.45rem;
         width: 100%;
 
-        .button {
+        .button,
+        .ui-button {
             flex: 1;
             min-width: 0;
             font-size: 0.7rem;
@@ -340,6 +341,103 @@
             background-color: rgba(#3fb950, 0.1);
             border: 1px solid rgba(#3fb950, 0.2);
         }
+
+        &--practice {
+            color: $accent-secondary;
+            background-color: rgba($accent-secondary, 0.1);
+            border: 1px solid rgba($accent-secondary, 0.2);
+        }
+    }
+}
+
+// ── STAR Practice + Code Runner ───────────────────────────────────────────────
+.star-textarea {
+    width: 100%;
+    background: $bg-input;
+    border: 1px solid $border-color;
+    border-radius: 0.45rem;
+    padding: 0.7rem 0.85rem;
+    color: $text-primary;
+    font-family: $font-stack;
+    font-size: 0.84rem;
+    line-height: 1.55;
+    resize: vertical;
+    box-sizing: border-box;
+
+    &:focus {
+        outline: none;
+        border-color: $border-focus;
+    }
+}
+
+.star-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.star-hint {
+    font-size: 0.72rem;
+    color: $text-soft;
+    font-weight: 600;
+}
+
+.star-error {
+    padding: 0.55rem 0.9rem;
+    background: rgba($danger, 0.1);
+    border: 1px solid rgba($danger, 0.25);
+    border-radius: 0.5rem;
+    color: $danger;
+    font-size: 0.78rem;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+.star-result {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    background: $bg-panel;
+    border: 1px solid $border-color;
+    border-radius: 0.5rem;
+    padding: 0.75rem 0.9rem;
+
+    &__row {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    &__advice {
+        margin: 0;
+        font-size: 0.8rem;
+        color: $text-primary;
+        line-height: 1.55;
+
+        strong {
+            color: $accent;
+        }
+    }
+}
+
+.star-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.25rem 0.55rem;
+    border-radius: 0.35rem;
+    border: 1px solid;
+
+    &--ok {
+        color: $severity-low;
+        background: rgba($severity-low, 0.1);
+        border-color: rgba($severity-low, 0.25);
+    }
+
+    &--no {
+        color: $severity-high;
+        background: rgba($severity-high, 0.1);
+        border-color: rgba($severity-high, 0.25);
     }
 }
 

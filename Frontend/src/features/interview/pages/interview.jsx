@@ -3,7 +3,10 @@ import '../style/interview.scss'
 import { useInterview } from '../hooks/useInterview.js'
 import { useParams, Link } from 'react-router'
 import AppNavbar from '../../../components/AppNavbar'
-import { shareReport } from '../services/interview.api'
+import { Button } from '../../../components/ui'
+import { shareReport, getStarCheck } from '../services/interview.api'
+import CodeRunner from '../components/CodeRunner'
+import GrammarCheck from '../components/GrammarCheck'
 
 
 const STAR_LABELS = [
@@ -23,6 +26,10 @@ const NAV_ITEMS = [
 const QuestionCard = ({ item, index }) => {
     const [ open, setOpen ] = useState(false)
     const [copied, setCopied] = useState(false)
+    const [practiceAnswer, setPracticeAnswer] = useState('')
+    const [starFeedback, setStarFeedback] = useState(null)
+    const [starLoading, setStarLoading] = useState(false)
+    const [starError, setStarError] = useState('')
 
     const difficultyClass = item.difficulty === 'Easy' ? 'badge--low' : item.difficulty === 'Hard' ? 'badge--high' : 'badge--mid'
 
@@ -35,6 +42,26 @@ const QuestionCard = ({ item, index }) => {
             // ignore
         }
     }
+
+    const onCheckStar = async () => {
+        if (!practiceAnswer.trim()) {
+            setStarError('Write an answer first to check it against the STAR framework.')
+            return
+        }
+        setStarLoading(true)
+        setStarError('')
+        setStarFeedback(null)
+        try {
+            const response = await getStarCheck({ questionText: item.question, userAnswer: practiceAnswer })
+            setStarFeedback(response.feedback)
+        } catch (err) {
+            setStarError(err.response?.data?.message || err.message || 'Failed to check STAR framework')
+        } finally {
+            setStarLoading(false)
+        }
+    }
+
+    const isCodingQuestion = Boolean(item.isCoding) && Array.isArray(item.testCases) && item.testCases.length > 0
 
     return (
         <div className='q-card'>
@@ -58,6 +85,49 @@ const QuestionCard = ({ item, index }) => {
                     <div className='q-card__section'>
                         <span className='q-card__tag q-card__tag--answer'>Model Answer</span>
                         <p>{item.answer}</p>
+                    </div>
+
+                    {isCodingQuestion && (
+                        <div className='q-card__section'>
+                            <CodeRunner questionId={item._id} />
+                        </div>
+                    )}
+
+                    <div className='q-card__section'>
+                        <span className='q-card__tag q-card__tag--practice'>Practice Answer</span>
+                        <textarea
+                            className='star-textarea'
+                            value={practiceAnswer}
+                            onChange={(e) => setPracticeAnswer(e.target.value)}
+                            rows={4}
+                            placeholder='Write your own answer here, then check the STAR framework and grammar...'
+                        />
+                        <div className='star-actions'>
+                            <Button size='sm' variant='secondary' onClick={onCheckStar} disabled={starLoading}>
+                                {starLoading ? 'Checking...' : 'Check STAR'}
+                            </Button>
+                            <span className='star-hint'>Situation, Task, Action, Result</span>
+                        </div>
+                        <GrammarCheck text={practiceAnswer} />
+
+                        {starError && <div className='star-error'>{starError}</div>}
+
+                        {starFeedback && (
+                            <div className='star-result'>
+                                <div className='star-result__row'>
+                                    {STAR_LABELS.map(({ key, label }) => (
+                                        <span key={key} className={`star-label ${starFeedback[key] ? 'star-label--ok' : 'star-label--no'}`}>
+                                            {label}: {starFeedback[key] ? 'Yes' : 'No'}
+                                        </span>
+                                    ))}
+                                </div>
+                                {starFeedback.improvementAdvice && (
+                                    <p className='star-result__advice'>
+                                        <strong>Improvement:</strong> {starFeedback.improvementAdvice}
+                                    </p>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -160,7 +230,8 @@ const Interview = () => {
                     </div>
                     <div className='interview-nav__downloads'>
                         <p className='interview-nav__downloads-label'>Practice</p>
-                        <Link to={`/voice/${interviewId}`} className='button primary-button voice-mock-btn'>
+                        <Link to={`/voice/${interviewId}`} className='voice-mock-btn'>
+                            <Button variant='primary' size='md' style={{ width: '100%' }}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className='voice-mock-btn__icon'>
                                 <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
                                 <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
@@ -168,42 +239,46 @@ const Interview = () => {
                                 <line x1="8" y1="23" x2="16" y2="23"/>
                             </svg>
                             Voice Mock Interview
+                            </Button>
                         </Link>
 
                         <p className='interview-nav__downloads-label' style={{ marginTop: '1rem' }}>Export PDF</p>
                         <div className='interview-nav__download-row'>
-                            <button
+                            <Button
                                 type='button'
                                 onClick={() => handleDownloadPdf("resume")}
                                 disabled={pdfLoading || !report?.resume}
-                                className='button primary-button'>
+                                variant='primary'
+                                size='sm'>
                                 {pdfLoading ? "Generating…" : "Resume PDF"}
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 type='button'
                                 onClick={() => handleDownloadPdf("plan")}
                                 disabled={pdfLoading}
-                                className='button secondary-button'>
+                                variant='secondary'
+                                size='sm'>
                                 {pdfLoading ? "Generating…" : "Full Plan PDF"}
-                            </button>
+                            </Button>
                         </div>
 
                         <p className='interview-nav__downloads-label interview-nav__downloads-label--mt'>Share Report</p>
                         {shareToken ? (
                             <div className='share-link-box'>
                                 <input type='text' readOnly value={shareUrl} className='share-link-input' onClick={(e) => e.target.select()} />
-                                <button type='button' className='button secondary-button' onClick={() => navigator.clipboard.writeText(shareUrl)}>
+                                <Button type='button' variant='secondary' size='sm' onClick={() => navigator.clipboard.writeText(shareUrl)}>
                                     Copy
-                                </button>
+                                </Button>
                             </div>
                         ) : (
-                            <button
+                            <Button
                                 type='button'
                                 onClick={handleShare}
                                 disabled={shareLoading}
-                                className='button primary-button'>
+                                variant='primary'
+                                size='sm'>
                                 {shareLoading ? "Generating…" : "Generate Share Link"}
-                            </button>
+                            </Button>
                         )}
                     </div>
                 </nav>

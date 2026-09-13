@@ -35,6 +35,13 @@ const interviewReportSchema = z.object({
       intention: z.string(),
       answer: z.string(),
       modelAnswer: z.string().optional(),
+      isCoding: z.boolean().optional(),
+      testCases: z.array(
+        z.object({
+          input: z.string(),
+          expectedOutput: z.string(),
+        })
+      ).optional(),
     })
   ),
   behaviouralQuestions: z.array(
@@ -324,12 +331,22 @@ function normalizeAiReport(raw) {
         q.answer ||
         ""
 
+      const rawTestCases = (q.testCases || q.test_cases || [])
+        .filter((tc) => tc && (tc.input || tc.expectedOutput))
+        .slice(0, 3)
+        .map((tc) => ({
+          input: String(tc.input || ""),
+          expectedOutput: String(tc.expectedOutput || tc.expected_output || ""),
+        }))
+
       return {
         question: String(q.question || ""),
         difficulty: String(q.difficulty || "Medium"),
         intention: String(q.intention || ""),
         answer: String(answerText),
         modelAnswer: String(modelAnswerText),
+        isCoding: Boolean(q.isCoding),
+        testCases: rawTestCases,
       }
     })
 
@@ -388,7 +405,64 @@ function parseJsonSafely(text) {
   throw new Error(`AI returned invalid JSON (${lastError?.message || "parse error"}). Please try again.`)
 }
 
-function buildProfileContext({ githubSummary, leetcodeSummary }) {
+function buildDsaContext({ leetcodeSummary, codeforcesSummary }) {
+  const sections = []
+
+  const topicMap = new Map()
+
+  const addTopic = (tag, solved) => {
+    const name = String(tag || "Unknown").trim()
+    if (!name) return
+    const existing = topicMap.get(name)
+    if (existing) existing.solved += Number(solved || 0)
+    else topicMap.set(name, { tag: name, solved: Number(solved || 0) })
+  }
+
+  for (const topic of (leetcodeSummary?.topTopics || [])) {
+    addTopic(topic.tag, topic.solved)
+  }
+
+  for (const topic of (codeforcesSummary?.tagWise || [])) {
+    addTopic(topic.tag, topic.solved)
+  }
+
+  const mergedTopics = Array.from(topicMap.values())
+    .sort((a, b) => b.solved - a.solved)
+    .slice(0, 6)
+    .filter((topic) => topic.solved > 0)
+
+  const hasLeetcode = leetcodeSummary && leetcodeSummary.totalSolved >= 0
+  const hasCodeforces = codeforcesSummary && codeforcesSummary.totalSolved >= 0
+  const hasAnyDsa = hasLeetcode || hasCodeforces
+  if (!hasAnyDsa) return sections.join("\n")
+
+  const parts = []
+
+  if (hasLeetcode) {
+    parts.push(
+      `LeetCode: ${leetcodeSummary.totalSolved || 0} solved (Easy: ${leetcodeSummary.easy || 0}, Medium: ${leetcodeSummary.medium || 0}, Hard: ${leetcodeSummary.hard || 0})`
+    )
+  }
+
+  if (hasCodeforces) {
+    parts.push(
+      `Codeforces: ${codeforcesSummary.totalSolved || 0} solved, rating ${codeforcesSummary.rating || 0} (max ${codeforcesSummary.maxRating || 0})${codeforcesSummary.rank ? `, rank "${codeforcesSummary.rank}"` : ""}`
+    )
+  }
+
+  sections.push(
+    `\n\nCandidate's DSA (competitive programming) profile — combined from LeetCode and Codeforces:\n${parts.join("\n")}\n` +
+    `Top topics (combined): ${mergedTopics.map((topic) => `${topic.tag} (${topic.solved} solved)`).join(", ") || "none reported"}\n\n` +
+    `Balance the DSA/data-structures technicalQuestions across TWO goals:\n` +
+    `1. Probe WEAK areas — ask about topics where the candidate has LOW solved counts (or topics absent/lower in the combined list) to uncover gaps, and mention this explicitly by referencing the topic name.\n` +
+    `2. Verify depth — include AT LEAST ONE technicalQuestion on the candidate's STRONGEST topic (highest combined solved count) phrased as a deeper, follow-up style question.\n` +
+    `Also factor the candidate's total solved count and rating into the score: more accepted solutions and a healthy Easy/Medium/Hard spread (or a strong Codeforces rating) should raise it moderately, while a very low count or only easy solves should cap it.`
+  )
+
+  return sections.join("\n")
+}
+
+function buildProfileContext({ githubSummary, leetcodeSummary, codeforcesSummary }) {
   const sections = []
 
   const repos = (githubSummary?.repos || []).filter(
@@ -412,27 +486,13 @@ function buildProfileContext({ githubSummary, leetcodeSummary }) {
     )
   }
 
-  if (leetcodeSummary && leetcodeSummary.totalSolved >= 0) {
-    const topics = (leetcodeSummary.topTopics || [])
-      .map((topic) => `${topic.tag} (${topic.solved} solved)`)
-      .join(", ")
-
-    sections.push(
-      `\n\nCandidate's LeetCode (DSA) profile:\n` +
-      `Total solved: ${leetcodeSummary.totalSolved || 0} (Easy: ${leetcodeSummary.easy || 0}, Medium: ${leetcodeSummary.medium || 0}, Hard: ${leetcodeSummary.hard || 0})\n` +
-      `Top topics: ${topics || "none reported"}\n\n` +
-      `Balance the DSA/data-structures technicalQuestions across TWO goals:\n` +
-      `1. Probe WEAK areas — ask about topics where the candidate has LOW solved counts (or topics absent/lower in the top list) to uncover gaps, and mention this explicitly by referencing the topic name.\n` +
-      `2. Verify depth — include AT LEAST ONE technicalQuestion on the candidate's STRONGEST topic (highest solved count) phrased as a deeper, follow-up style question.\n` +
-      `Also factor the candidate's total solved count into the score: more accepted solutions and a healthy Easy/Medium/Hard spread should raise it moderately, while a very low count or only easy solves should cap it.`
-    )
-  }
+  sections.push(buildDsaContext({ leetcodeSummary, codeforcesSummary }))
 
   return sections.join("\n")
 }
 
-function buildPrompt({ resume, selfDescription, jobDescription, targetCompany, language, githubSummary, leetcodeSummary, strict = false }) {
-  const limits = `\nRules:\n- Return ONLY one valid JSON object. No markdown, no comments, no trailing commas.\n- Use double quotes for all strings. Escape newlines inside strings as spaces.\n- technicalQuestions: exactly 5 items\n- behaviouralQuestions: exactly 5 items\n- skillGaps: 3 to 5 items (severity: low, medium, or high only)\n- preparationPlan: exactly 5 days (day 1 through 5)\n- Keep each answer under 120 words.`
+function buildPrompt({ resume, selfDescription, jobDescription, targetCompany, language, githubSummary, leetcodeSummary, codeforcesSummary, strict = false }) {
+  const limits = `\nRules:\n- Return ONLY one valid JSON object. No markdown, no comments, no trailing commas.\n- Use double quotes for all strings. Escape newlines inside strings as spaces.\n- technicalQuestions: exactly 5 items\n- behaviouralQuestions: exactly 5 items\n- skillGaps: 3 to 5 items (severity: low, medium, or high only)\n- preparationPlan: exactly 5 days (day 1 through 5)\n- Keep each answer under 120 words.\n- For technicalQuestions: set "isCoding" to true ONLY when the question is an algorithmic/DSA/data-structures task solvable in code. When isCoding is true, include exactly 2-3 SIMPLE test cases with small inputs and the exact expected output (as text). For behavioural and non-coding questions set "isCoding" to false and omit/empty testCases.`
 
   const langMap = { en: "English", hi: "Hindi", hinglish: "Hinglish (a natural mix of Hindi and English)" }
   const langInstruction = language && language !== "en"
@@ -443,7 +503,7 @@ function buildPrompt({ resume, selfDescription, jobDescription, targetCompany, l
   "matchScore": <number 0-100>,
   "score": <number 0-100>,
   "title": "<job title>",
-  "technicalQuestions": [{ "question": "", "difficulty": "Easy|Medium|Hard", "intention": "", "answer": "", "modelAnswer": "" }],
+  "technicalQuestions": [{ "question": "", "difficulty": "Easy|Medium|Hard", "intention": "", "answer": "", "modelAnswer": "", "isCoding": <true|false>, "testCases": [{ "input": "", "expectedOutput": "" }] }],
   "behaviouralQuestions": [{ "question": "", "difficulty": "Easy|Medium|Hard", "intention": "", "answer": "", "modelAnswer": "" }],
   "skillGaps": [{ "skill": "", "severity": "low|medium|high" }],
   "preparationPlan": [{ "day": 1, "focus": "", "tasks": ["", ""] }]
@@ -457,7 +517,7 @@ function buildPrompt({ resume, selfDescription, jobDescription, targetCompany, l
     ? `Target company: ${targetCompany}. Adjust the blend of behavioral vs. technical questions and the question style to match ${targetCompany}. For example, if the company is Amazon, include leadership-principles-style behavioral questions.`
     : ""
 
-  const profileContext = buildProfileContext({ githubSummary, leetcodeSummary })
+  const profileContext = buildProfileContext({ githubSummary, leetcodeSummary, codeforcesSummary })
 
   return `${strictNote}You are an expert interview coach. Generate an interview preparation report as JSON.\n\n${limits}\n${langInstruction}\n\n${companyContext}${profileContext}\n\nSchema:\n${schema}\n\nResume:\n${truncate(resume, MAX_RESUME_CHARS)}\n\nSelf Description:\n${truncate(selfDescription, MAX_SELF_CHARS) || "Use the resume."}\n\nJob Description:\n${truncate(jobDescription, MAX_JOB_CHARS)}`
 }
@@ -544,6 +604,7 @@ async function generateInterviewReport({
   language,
   githubSummary = null,
   leetcodeSummary = null,
+  codeforcesSummary = null,
 }) {
   if (!process.env.GOOGLE_API_KEY) {
     throw new Error("GOOGLE_API_KEY is not configured")
@@ -561,6 +622,7 @@ async function generateInterviewReport({
         language,
         githubSummary,
         leetcodeSummary,
+        codeforcesSummary,
         strict: attempt > 0,
       })
 

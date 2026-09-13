@@ -7,6 +7,7 @@ const {
 const interviewReportModel = require("../models/interviewReport.model")
 const { fetchGitHubSummary } = require("../services/github.service")
 const { fetchLeetCodeSummary } = require("../services/leetcode.service")
+const { fetchCodeforcesSummary } = require("../services/codeforces.service")
 const crypto = require("crypto")
 
 async function generateInterviewReportController(req, res) {
@@ -18,6 +19,7 @@ async function generateInterviewReportController(req, res) {
     const language = req.body?.language || "en"
     const githubUsername = req.body?.githubUsername?.trim() || ""
     const leetcodeUsername = req.body?.leetcodeUsername?.trim() || ""
+    const codeforcesHandle = req.body?.codeforcesHandle?.trim() || ""
 
     if (!jobDescription) {
       return res.status(400).json({
@@ -68,6 +70,7 @@ async function generateInterviewReportController(req, res) {
     const warnings = []
     let githubSummary = null
     let leetcodeSummary = null
+    let codeforcesSummary = null
 
     if (githubUsername) {
       try {
@@ -87,6 +90,15 @@ async function generateInterviewReportController(req, res) {
       }
     }
 
+    if (codeforcesHandle) {
+      try {
+        codeforcesSummary = await fetchCodeforcesSummary(codeforcesHandle)
+      } catch (error) {
+        console.warn("Codeforces profile fetch failed:", error.message)
+        warnings.push(`Couldn't fetch Codeforces data for "${codeforcesHandle}", continuing with resume only.`)
+      }
+    }
+
     const interviewReportByAi = await generateInterviewReport({
       resume: resumeText,
       selfDescription: selfDescription || resumeText,
@@ -95,6 +107,7 @@ async function generateInterviewReportController(req, res) {
       language,
       githubSummary,
       leetcodeSummary,
+      codeforcesSummary,
     })
 
     const interviewReport = await interviewReportModel.create({
@@ -114,6 +127,7 @@ async function generateInterviewReportController(req, res) {
       preparationPlan: interviewReportByAi.preparationPlan,
       githubSummary,
       leetcodeSummary,
+      codeforcesSummary,
     })
 
     res.status(201).json({
@@ -359,6 +373,89 @@ async function nextQuestionController(req, res) {
   }
 }
 
+// ── Live Code Execution (Judge0) ─────────────────────────────────────────────
+async function runCodeController(req, res) {
+  try {
+    const code = req.body?.code
+    const language = req.body?.language
+    const questionId = req.body?.questionId
+
+    if (!code?.trim()) {
+      return res.status(400).json({ message: "code is required" })
+    }
+    if (!language) {
+      return res.status(400).json({ message: "language is required" })
+    }
+    if (!questionId) {
+      return res.status(400).json({ message: "questionId is required" })
+    }
+
+    const report = await interviewReportModel.findOne({
+      user: req.user.id,
+      $or: [
+        { "technicalQuestions._id": questionId },
+        { "behaviouralQuestions._id": questionId },
+      ],
+    })
+
+    if (!report) {
+      return res.status(404).json({ message: "Question not found for this report" })
+    }
+
+    const question =
+      (report.technicalQuestions || []).find((q) => String(q._id) === String(questionId)) ||
+      (report.behaviouralQuestions || []).find((q) => String(q._id) === String(questionId))
+
+    if (!question) {
+      return res.status(404).json({ message: "Question not found" })
+    }
+
+    const testCases = question.testCases || []
+    if (!testCases.length) {
+      return res.status(400).json({
+        message: "Only coding questions with test cases can be run. This question has no executable test cases.",
+      })
+    }
+
+    const { runCodeAgainstTestCases } = require("../services/codeExecution.service")
+    const result = await runCodeAgainstTestCases({ code, language, testCases })
+
+    res.status(200).json({ message: "Code executed", result, questionId })
+  } catch (error) {
+    console.error("Run code error:", error)
+    const msg = error.message || "Couldn't run code right now, try again"
+    const isConfigError = error.code === "JUDGE0_NOT_CONFIGURED"
+
+    res.status(isConfigError ? 503 : 200).json({
+      message: msg,
+      error: msg,
+    })
+  }
+}
+
+// ── Grammar Check (LanguageTool) ──────────────────────────────────────────────
+async function grammarCheckController(req, res) {
+  try {
+    const text = req.body?.text
+
+    if (!text?.trim()) {
+      return res.status(400).json({ message: "text is required" })
+    }
+
+    const { checkGrammar } = require("../services/grammar.service")
+    const result = await checkGrammar({ text })
+
+    res.status(200).json({ message: "Grammar check complete", ...result })
+  } catch (error) {
+    console.error("Grammar check error:", error)
+    res.status(200).json({
+      message: error.message || "Couldn't check grammar right now, try again",
+      error: error.message || "Couldn't check grammar right now, try again",
+      issues: [],
+    })
+  }
+}
+
 // ── Feature 4: Mentor Share Link ──────────────────────────────────────────────
 async function shareReportController(req, res) {
   try {
@@ -436,6 +533,8 @@ module.exports = {
   voiceFeedbackController,
   gapAnalysisController,
   nextQuestionController,
+  runCodeController,
+  grammarCheckController,
   shareReportController,
   getSharedReportController,
   addMentorCommentController,

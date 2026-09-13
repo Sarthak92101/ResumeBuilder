@@ -1,49 +1,27 @@
 import { Link } from "react-router-dom"
 import AppNavbar from "../../../components/AppNavbar"
-import { ABOUT } from "../../../content/about"
-import "../style/about.scss"
+import { Card, Button, PageHeader } from "../../../components/ui"
 
 const About = () => {
   return (
-    <div className="about-page">
+    <div className="page-shell">
       <AppNavbar />
 
-      <main className="about-main">
-        <section className="about-hero">
-          <p className="about-hero__eyebrow">About me</p>
+      <main className="container">
+        <PageHeader title="About SkillMirror" subtitle="A practical AI-powered interview preparation workflow for software engineers." />
 
-          <h1>
-            <span className="highlight">SkillMirror</span>
-          </h1>
-
-          <p className="about-hero__role">AI Interview Preparation Tool</p>
-          <p className="about-hero__lead">Upload your resume and job description to generate a personalized interview strategy.</p>
-        </section>
-
-        <article className="about-card about-card--wide">
-          <h2>This app</h2>
-
-          <p>
-            Upload your resume, add a job description, and get an
-            AI-generated interview plan including personalized
-            questions, skill-gap analysis, preparation roadmap,
-            interview tips, and downloadable PDF reports.
+        <Card style={{ padding: 'var(--space-6)' }}>
+          <p style={{ margin: '0 0 var(--space-3)', color: 'var(--color-accent)', fontWeight: 700 }}>AI Interview Preparation Tool</p>
+          <p style={{ margin: 0, lineHeight: 1.7, color: 'var(--color-text-secondary)' }}>
+            Upload your resume, add a job description, and get a tailored interview plan with personalized questions, skill-gap analysis, roadmap guidance, and downloadable reports.
           </p>
 
-          <div className="about-cta">
-            <Link to="/register" className="button primary-button">
-              Create Account
-            </Link>
-
-            <Link to="/login" className="button secondary-button">
-              Log In
-            </Link>
-
-            <Link to="/" className="button secondary-button">
-              Dashboard
-            </Link>
+          <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', marginTop: 'var(--space-5)' }}>
+            <Link to="/register" style={{ textDecoration: 'none' }}><Button variant="primary">Create Account</Button></Link>
+            <Link to="/login" style={{ textDecoration: 'none' }}><Button variant="secondary">Log In</Button></Link>
+            <Link to="/dashboard" style={{ textDecoration: 'none' }}><Button variant="ghost">Dashboard</Button></Link>
           </div>
-        </article>
+        </Card>
       </main>
     </div>
   )

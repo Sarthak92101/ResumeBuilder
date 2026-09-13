@@ -85,6 +85,20 @@ interviewRouter.post(
   interviewController.nextQuestionController
 )
 
+// ── Live Code Execution (Judge0) ──────────────────────────────────────────────
+interviewRouter.post(
+  "/run-code",
+  authMiddleware.authUser,
+  interviewController.runCodeController
+)
+
+// ── Grammar Check (LanguageTool) ──────────────────────────────────────────────
+interviewRouter.post(
+  "/grammar-check",
+  authMiddleware.authUser,
+  interviewController.grammarCheckController
+)
+
 // ── Feature 4: Mentor Share Link (public, no auth) ────────────────────────────
 interviewRouter.get(
   "/shared/:shareToken",

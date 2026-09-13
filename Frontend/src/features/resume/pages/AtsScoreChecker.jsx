@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useContext } from 'react'
 import AppNavbar from '../../../components/AppNavbar'
-import { listResumes, createAtsScore, getAtsScores } from '../services/resume.api'
+import { listResumes, createAtsScore } from '../services/resume.api'
 import { ThemeContext } from '../../theme/ThemeContext'
 import { RadialBarChart, RadialBar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
+import { Card, Button, Select, Textarea, PageHeader, Badge } from '../../../components/ui'
 
 const AtsScoreChecker = () => {
   const { theme } = useContext(ThemeContext)
@@ -53,90 +54,83 @@ const AtsScoreChecker = () => {
   ] : []
 
   return (
-    <div>
+    <div className="page-shell">
       <AppNavbar />
       <main className={`container ${theme === 'dark' ? 'theme-dark' : ''}`}>
-        <h1>ATS Score Checker</h1>
-        <div className="card" style={{ display: 'grid', gridTemplateColumns: '1fr 420px', gap: 20, alignItems: 'start' }}>
-          <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <label style={{ display: 'flex', flexDirection: 'column' }}>
-              Select Resume
-              <select value={selected} onChange={(e) => setSelected(e.target.value)}>
+        <PageHeader title="ATS Score Checker" subtitle="Measure how well your resume aligns with a target role and job description." />
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(280px, 0.8fr)', gap: 'var(--space-4)', alignItems: 'start' }}>
+          <Card style={{ padding: 'var(--space-5)' }}>
+            <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+              <Select label="Select Resume" value={selected} onChange={(e) => setSelected(e.target.value)}>
                 <option value="">-- choose --</option>
                 {resumes.map(r => (
                   <option key={r._id} value={r._id}>{r.fileName} — {new Date(r.createdAt).toLocaleDateString()}</option>
                 ))}
-              </select>
-            </label>
+              </Select>
 
-            <label style={{ display: 'flex', flexDirection: 'column' }}>
-              Job Description (optional)
-              <textarea
-                value={jobDesc}
-                onChange={(e) => setJobDesc(e.target.value)}
-                rows={8}
-                style={{ background: 'var(--panel)', color: 'var(--text)', border: '1px solid rgba(255,255,255,0.06)', padding: 12, borderRadius: 8 }}
-              />
-            </label>
+              <Textarea label="Job Description (optional)" value={jobDesc} onChange={(e) => setJobDesc(e.target.value)} rows={8} />
 
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button type="submit" className="button primary-button" disabled={loading}>{loading ? 'Checking…' : 'Check ATS Score'}</button>
-              <button type="button" className="button" onClick={() => { setJobDesc(''); setResult(null); setError('') }} disabled={loading}>Reset</button>
-            </div>
+              <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                <Button type="submit" variant="primary" disabled={loading}>{loading ? 'Checking…' : 'Check ATS Score'}</Button>
+                <Button type="button" variant="secondary" onClick={() => { setJobDesc(''); setResult(null); setError('') }} disabled={loading}>Reset</Button>
+              </div>
 
-            {error && <div style={{ marginTop: 8 }} className="error">{error}</div>}
-          </form>
+              {error && <div style={{ padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', background: 'rgba(229,72,77,0.08)', color: 'var(--color-danger)', border: '1px solid rgba(229,72,77,0.2)' }}>{error}</div>}
+            </form>
+          </Card>
 
-          <div style={{ minHeight: 220 }}>
+          <Card style={{ padding: 'var(--space-5)', minHeight: '220px' }}>
             {!result && (
-              <div style={{ color: 'var(--muted, #9ca3af)' }}>Results will appear here after running the checker.</div>
+              <div style={{ color: 'var(--color-text-secondary)' }}>Results will appear here after running the checker.</div>
             )}
 
             {result && (
               <div>
-                <h3 style={{ marginTop: 0 }}>Overall Score</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
+                  <h3 style={{ margin: 0 }}>Overall Score</h3>
+                  <Badge tone={Number(result.overallScore) >= 80 ? 'success' : Number(result.overallScore) >= 60 ? 'warning' : 'danger'}>{Number(result.overallScore || 0)}</Badge>
+                </div>
+
                 <div style={{ width: '100%', height: 180, position: 'relative' }}>
                   <ResponsiveContainer>
                     <RadialBarChart innerRadius="80%" outerRadius="100%" data={[{ name: 'score', value: Number(result.overallScore) || 0 }]} startAngle={180} endAngle={-180}>
-                      <RadialBar minAngle={15} background clockWise={false} dataKey="value" fill="#8b5cf6" />
+                      <RadialBar minAngle={15} background clockWise={false} dataKey="value" fill="var(--color-accent)" />
                     </RadialBarChart>
                   </ResponsiveContainer>
-                  <div style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                    <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--text)' }}>{Number(result.overallScore || 0)}</div>
-                  </div>
                 </div>
 
-                <h4 style={{ marginBottom: 6 }}>Missing Keywords</h4>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+                <h4 style={{ marginBottom: 'var(--space-2)' }}>Missing Keywords</h4>
+                <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', marginBottom: 'var(--space-4)' }}>
                   {(result.missingKeywords || []).length ? result.missingKeywords.map((k, i) => (
-                    <span key={i} className="chip">{k}</span>
-                  )) : <em>None detected</em>}
+                    <Badge key={i} tone="neutral">{k}</Badge>
+                  )) : <span style={{ color: 'var(--color-text-secondary)' }}>None detected</span>}
                 </div>
 
-                <h4 style={{ marginBottom: 6 }}>Suggestions</h4>
-                <ul>
+                <h4 style={{ marginBottom: 'var(--space-2)' }}>Suggestions</h4>
+                <ul style={{ margin: 0, paddingLeft: 'var(--space-4)', color: 'var(--color-text-secondary)', lineHeight: 1.7 }}>
                   {(result.suggestions || []).length ? result.suggestions.map((s, i) => (<li key={i}>{s}</li>)) : <li>No suggestions</li>}
                 </ul>
               </div>
             )}
-          </div>
+          </Card>
         </div>
 
         {result && (
-          <div className="card" style={{ marginTop: 16 }}>
-            <h3>Breakdown</h3>
+          <Card style={{ marginTop: 'var(--space-4)', padding: 'var(--space-5)' }}>
+            <h3 style={{ marginTop: 0 }}>Breakdown</h3>
             <div style={{ width: '100%', height: 240 }}>
               <ResponsiveContainer>
                 <BarChart data={breakdownData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis domain={[0, 100]} />
+                  <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" />
+                  <XAxis dataKey="name" stroke="var(--color-text-muted)" />
+                  <YAxis domain={[0, 100]} stroke="var(--color-text-muted)" />
                   <Tooltip />
-                  <Bar dataKey="value" fill="#60a5fa" />
+                  <Bar dataKey="value" fill="var(--color-accent)" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          </div>
+          </Card>
         )}
       </main>
     </div>

@@ -2,7 +2,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom"
 import { useAuth } from "../features/auth/hooks/useAuth"
 import { useContext } from "react"
 import { ThemeContext } from "../features/theme/ThemeContext"
-import "./AppNavbar.scss"
+import { Button } from './ui'
 
 const AppNavbar = () => {
   const { user, handleLogout } = useAuth()
@@ -15,60 +15,90 @@ const AppNavbar = () => {
     navigate("/login")
   }
 
-  const linkClass = (path) =>
-    `app-nav__link ${location.pathname === path ? "app-nav__link--active" : ""}`
+  const navItems = [
+    { path: '/', label: 'Interview Plan' },
+    { path: '/dashboard', label: 'Dashboard' },
+    { path: '/ats', label: 'ATS Checker' },
+    { path: '/resumes', label: 'My Resumes' },
+    { path: '/gap-analysis', label: 'Gap Analysis' },
+    { path: '/about', label: 'About Me' },
+  ]
+
+  const isActive = (path) => location.pathname === path
 
   return (
-    <header className="app-nav">
-      <Link to="/" className="app-nav__brand">
-        <span className="app-nav__logo">SM</span>
+    <header className="app-navbar" style={{
+      width: 'min(calc(100% - var(--space-6)), 1180px)',
+      margin: '0 auto',
+      padding: 'var(--space-3) var(--space-4)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 'var(--space-3)',
+      background: 'var(--color-surface)',
+      border: '1px solid var(--color-border)',
+      borderRadius: 'var(--radius-lg)',
+      position: 'sticky',
+      top: 'var(--space-3)',
+      zIndex: 20,
+      marginTop: 'var(--space-3)',
+    }}>
+      <Link to="/" style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 'var(--space-2)',
+        textDecoration: 'none',
+        color: 'var(--color-text-primary)',
+        fontWeight: 700,
+      }}>
+        <span style={{
+          width: '28px',
+          height: '28px',
+          display: 'grid',
+          placeItems: 'center',
+          borderRadius: 'var(--radius-sm)',
+          background: 'var(--color-accent)',
+          color: 'var(--color-surface)',
+          fontSize: '0.7rem',
+        }}>SM</span>
         <span>SkillMirror</span>
       </Link>
 
-      <nav className="app-nav__links">
-        <Link to="/" className={linkClass("/")}>
-          Interview Plan
-        </Link>
-        <Link to="/dashboard" className={linkClass("/dashboard")}>
-          Dashboard
-        </Link>
-        <Link to="/ats" className={linkClass("/ats")}>
-          ATS Checker
-        </Link>
-        <Link to="/resumes" className={linkClass("/resumes")}>
-          My Resumes
-        </Link>
-        <Link to="/gap-analysis" className={linkClass("/gap-analysis")}>
-          Gap Analysis
-        </Link>
-        <Link to="/about" className={linkClass("/about")}>
-          About Me
-        </Link>
+      <nav className="app-navbar__nav" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', flex: 1, justifyContent: 'center', overflowX: 'auto' }}>
+        {navItems.map((item) => (
+          <Link
+            key={item.path}
+            to={item.path}
+            style={{
+              textDecoration: 'none',
+              color: isActive(item.path) ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+              background: isActive(item.path) ? 'var(--color-accent-soft)' : 'transparent',
+              borderRadius: 'var(--radius-md)',
+              padding: 'var(--space-2) var(--space-3)',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {item.label}
+          </Link>
+        ))}
       </nav>
 
-      <div className="app-nav__actions">
-        <button type="button" className="theme-toggle" onClick={toggle} aria-label="Toggle theme">
-          {theme === 'dark' ? (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          ) : (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="1.5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          )}
-        </button>
+      <div className="app-navbar__actions" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+        <Button variant="ghost" size="sm" onClick={toggle} aria-label="Toggle theme" style={{ minWidth: '36px', padding: '0 var(--space-2)' }}>
+          {theme === 'dark' ? '☀' : '☾'}
+        </Button>
+
         {user ? (
           <>
-            <span className="app-nav__user">Hi, {user.username}</span>
-            <button type="button" className="button secondary-button" onClick={onLogout}>
-              Logout
-            </button>
+            <span className="app-navbar__greeting" style={{ fontSize: '0.76rem', color: 'var(--color-text-secondary)' }}>Hi, {user.username}</span>
+            <Button variant="secondary" size="sm" onClick={onLogout}>Logout</Button>
           </>
         ) : (
           <>
-            <Link to="/login" className="button secondary-button">
-              Log in
-            </Link>
-            <Link to="/register" className="button primary-button">
-              Sign up
-            </Link>
+            <Link to="/login" style={{ textDecoration: 'none' }}><Button variant="secondary" size="sm">Log in</Button></Link>
+            <Link to="/register" style={{ textDecoration: 'none' }}><Button variant="primary" size="sm">Sign up</Button></Link>
           </>
         )}
       </div>

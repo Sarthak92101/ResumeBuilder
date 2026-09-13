@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router'
 import { getSharedReport, addMentorComment } from '../services/interview.api'
+import { Button } from '../../../components/ui'
 import '../style/shared.scss'
 
 const SharedReport = () => {
@@ -205,9 +206,9 @@ const SharedReport = () => {
             className='shared-comment-textarea'
             required
           />
-          <button type='submit' disabled={submitting || !commentText.trim()} className='button primary-button'>
+          <Button type='submit' disabled={submitting || !commentText.trim()} variant='primary'>
             {submitting ? 'Posting...' : 'Post Comment'}
-          </button>
+          </Button>
         </form>
       </section>
     </div>

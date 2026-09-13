@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import AppNavbar from '../../../components/AppNavbar'
 import { listResumes } from '../../resume/services/resume.api'
 import { getGapAnalysis } from '../services/interview.api'
-import '../style/gap.scss'
+import { Card, PageHeader, Button, Select, Textarea, Badge } from '../../../components/ui'
 
 const STATUS_COLORS = {
   'Have': { bg: 'rgba(52, 211, 153, 0.12)', color: '#34d399', border: 'rgba(52, 211, 153, 0.25)' },
@@ -50,62 +50,44 @@ const GapAnalysis = () => {
   }
 
   return (
-    <div>
+    <div className='page-shell'>
       <AppNavbar />
-      <main className='container gap-page'>
-        <header className='gap-header'>
-          <h1>Resume-to-JD Gap Analysis</h1>
-          <p>Discover which skills you already have, which to add to your resume, and which to learn.</p>
-        </header>
+      <main className='container'>
+        <PageHeader title='Resume-to-JD Gap Analysis' subtitle='Discover which skills you already have, which to add to your resume, and which to learn.' />
 
-        <form onSubmit={onSubmit} className='gap-form'>
-          <div className='gap-form-grid'>
-            <label className='gap-field'>
-              <span>Select Resume (upload first in My Resumes)</span>
-              <select value={selectedResumeId} onChange={(e) => setSelectedResumeId(e.target.value)}>
-                <option value=''>-- choose --</option>
-                {resumes.map(r => (
-                  <option key={r._id} value={r._id}>{r.fileName} — {new Date(r.createdAt).toLocaleDateString()}</option>
-                ))}
-              </select>
-            </label>
+        <Card style={{ padding: 'var(--space-5)' }}>
+          <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            <Select label='Select Resume (upload first in My Resumes)' value={selectedResumeId} onChange={(e) => setSelectedResumeId(e.target.value)}>
+              <option value=''>-- choose --</option>
+              {resumes.map(r => (
+                <option key={r._id} value={r._id}>{r.fileName} — {new Date(r.createdAt).toLocaleDateString()}</option>
+              ))}
+            </Select>
 
-            <label className='gap-field'>
-              <span>Job Description</span>
-              <textarea
-                value={jobDescription}
-                onChange={(e) => setJobDescription(e.target.value)}
-                rows={10}
-                placeholder='Paste the full job description here...'
-              />
-            </label>
-          </div>
+            <Textarea label='Job Description' value={jobDescription} onChange={(e) => setJobDescription(e.target.value)} rows={10} placeholder='Paste the full job description here...' />
 
-          <div className='gap-actions'>
-            <button type='submit' className='button primary-button' disabled={loading}>
-              {loading ? 'Analyzing...' : 'Run Gap Analysis'}
-            </button>
-            <button type='button' className='button secondary-button' onClick={() => { setResult(null); setJobDescription(''); setSelectedResumeId(''); setError(''); }}>
-              Reset
-            </button>
-          </div>
-          {error && <div className='gap-error'>{error}</div>}
-        </form>
+            <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+              <Button type='submit' variant='primary' disabled={loading}>{loading ? 'Analyzing...' : 'Run Gap Analysis'}</Button>
+              <Button type='button' variant='secondary' onClick={() => { setResult(null); setJobDescription(''); setSelectedResumeId(''); setError(''); }}>Reset</Button>
+            </div>
+            {error && <div style={{ padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', background: 'rgba(229,72,77,0.08)', color: 'var(--color-danger)', border: '1px solid rgba(229,72,77,0.2)' }}>{error}</div>}
+          </form>
+        </Card>
 
         {result && (
-          <div className='gap-results'>
-            <h2>Analysis Results</h2>
-            <div className='gap-results__summary'>
-              <span className='gap-count gap-count--have'>{(result.gaps || []).filter(g => g.status === 'Have').length} Already Have</span>
-              <span className='gap-count gap-count--add'>{(result.gaps || []).filter(g => g.status === 'Add to resume').length} Add to Resume</span>
-              <span className='gap-count gap-count--learn'>{(result.gaps || []).filter(g => g.status === 'Learn').length} Need to Learn</span>
+          <Card style={{ marginTop: 'var(--space-5)', padding: 'var(--space-5)' }}>
+            <h2 style={{ marginTop: 0 }}>Analysis Results</h2>
+            <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', marginBottom: 'var(--space-4)' }}>
+              <Badge tone='success'>{(result.gaps || []).filter(g => g.status === 'Have').length} Already Have</Badge>
+              <Badge tone='warning'>{(result.gaps || []).filter(g => g.status === 'Add to resume').length} Add to Resume</Badge>
+              <Badge tone='danger'>{(result.gaps || []).filter(g => g.status === 'Learn').length} Need to Learn</Badge>
             </div>
-            <table className='gap-table'>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th>Skill</th>
-                  <th>Status</th>
-                  <th>Suggestion</th>
+                  <th style={{ textAlign: 'left', padding: 'var(--space-2) 0', color: 'var(--color-text-secondary)' }}>Skill</th>
+                  <th style={{ textAlign: 'left', padding: 'var(--space-2) 0', color: 'var(--color-text-secondary)' }}>Status</th>
+                  <th style={{ textAlign: 'left', padding: 'var(--space-2) 0', color: 'var(--color-text-secondary)' }}>Suggestion</th>
                 </tr>
               </thead>
               <tbody>
@@ -113,19 +95,17 @@ const GapAnalysis = () => {
                   const colors = STATUS_COLORS[item.status] || STATUS_COLORS['Learn']
                   return (
                     <tr key={i}>
-                      <td className='gap-table__skill'>{item.skill}</td>
-                      <td>
-                        <span className='gap-status-badge' style={{ background: colors.bg, color: colors.color, borderColor: colors.border }}>
-                          {item.status}
-                        </span>
+                      <td style={{ borderTop: '1px solid var(--color-border)', padding: 'var(--space-3) 0', color: 'var(--color-text-primary)' }}>{item.skill}</td>
+                      <td style={{ borderTop: '1px solid var(--color-border)', padding: 'var(--space-3) 0' }}>
+                        <Badge tone={item.status === 'Have' ? 'success' : item.status === 'Add to resume' ? 'warning' : 'danger'}>{item.status}</Badge>
                       </td>
-                      <td className='gap-table__suggestion'>{item.suggestion}</td>
+                      <td style={{ borderTop: '1px solid var(--color-border)', padding: 'var(--space-3) 0', color: 'var(--color-text-secondary)' }}>{item.suggestion}</td>
                     </tr>
                   )
                 })}
               </tbody>
             </table>
-          </div>
+          </Card>
         )}
       </main>
     </div>

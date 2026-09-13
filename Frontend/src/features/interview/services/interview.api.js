@@ -15,6 +15,7 @@ export const generateInterviewReport = async ({
   language,
   githubUsername,
   leetcodeUsername,
+  codeforcesHandle,
 }) => {
   if (resumeId) {
     const response = await api.post('/api/interview/', {
@@ -26,6 +27,7 @@ export const generateInterviewReport = async ({
       language,
       githubUsername: githubUsername || '',
       leetcodeUsername: leetcodeUsername || '',
+      codeforcesHandle: codeforcesHandle || '',
     })
     return response.data
   }
@@ -46,6 +48,9 @@ export const generateInterviewReport = async ({
   if (leetcodeUsername) {
     formData.append("leetcodeUsername", leetcodeUsername)
   }
+  if (codeforcesHandle) {
+    formData.append("codeforcesHandle", codeforcesHandle)
+  }
 
   if (resumeFile) {
     formData.append("resume", resumeFile)
@@ -57,7 +62,7 @@ export const generateInterviewReport = async ({
   return response.data
 }
 
-// ── Developer profile previews (GitHub / LeetCode) ───────────────────────────
+// ── Developer profile previews (GitHub / LeetCode / Codeforces) ──────────────
 export const getGitHubSummary = async (username) => {
   const response = await api.get(`/api/github/${encodeURIComponent(username)}`)
   return response.data
@@ -65,6 +70,11 @@ export const getGitHubSummary = async (username) => {
 
 export const getLeetCodeSummary = async (username) => {
   const response = await api.get(`/api/leetcode/${encodeURIComponent(username)}`)
+  return response.data
+}
+
+export const getCodeforcesSummary = async (handle) => {
+  const response = await api.get(`/api/codeforces/${encodeURIComponent(handle)}`)
   return response.data
 }
 
@@ -138,6 +148,22 @@ export const getNextQuestion = async ({ previousQuestions, runningScore, resumeT
     resumeText,
     jobDescription,
   })
+  return response.data
+}
+
+// ── Live Code Execution (Judge0) ──────────────────────────────────────────────
+export const runUserCode = async ({ code, language, questionId }) => {
+  const response = await api.post('/api/interview/run-code', {
+    code,
+    language,
+    questionId,
+  })
+  return response.data
+}
+
+// ── Grammar Check (LanguageTool) ──────────────────────────────────────────────
+export const checkGrammar = async ({ text }) => {
+  const response = await api.post('/api/interview/grammar-check', { text })
   return response.data
 }
 
