@@ -9,6 +9,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    animation: motion-page-enter 320ms ease-out both;
 
     &__header {
         display: flex;
@@ -54,6 +55,11 @@
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    animation: motion-page-enter 260ms ease-out both;
+
+    &:nth-child(2) { animation-delay: 35ms; }
+    &:nth-child(3) { animation-delay: 70ms; }
+    &:nth-child(4) { animation-delay: 105ms; }
 
     &__row {
         display: flex;
@@ -144,6 +150,14 @@
     width: 120px;
     height: 120px;
     flex-shrink: 0;
+
+    &__ring {
+        position: absolute;
+        inset: 7px;
+        border-radius: 50%;
+        -webkit-mask: radial-gradient(circle, transparent 0 55%, #000 57% 100%);
+        mask: radial-gradient(circle, transparent 0 55%, #000 57% 100%);
+    }
 
     &__center {
         position: absolute;

@@ -3,6 +3,7 @@ import { useInterview } from '../hooks/useInterview.js'
 import { getVoiceFeedback } from '../services/interview.api'
 import AppNavbar from '../../../components/AppNavbar'
 import { Button } from '../../../components/ui'
+import LoadingExperience from '../../../components/ui/LoadingExperience.jsx'
 import '../style/voice.scss'
 
 const FILLER_WORDS = /\b(um|uh|like|you know|so|basically|actually|right)\b/gi
@@ -184,11 +185,7 @@ const VoiceInterview = () => {
   }, [cancelSpeech])
 
   if (loading || !report) {
-    return (
-      <main className='loading-screen'>
-        <h1>Loading interview questions...</h1>
-      </main>
-    )
+    return <LoadingExperience title='Getting your practice room ready' detail='Gathering your interview questions so you can rehearse out loud.' />
   }
 
   if (!SpeechRecognition) {
@@ -219,7 +216,7 @@ const VoiceInterview = () => {
         <div className='voice-layout'>
           {/* Question Panel */}
           <div className='voice-question-panel'>
-            <div className='voice-question-card'>
+            <div key={activeQ} className='voice-question-card'>
               <div className='voice-question-meta'>
                 <span className={`voice-difficulty voice-difficulty--${(currentQuestion.difficulty || 'Medium').toLowerCase()}`}>
                   {currentQuestion.difficulty || 'Medium'}

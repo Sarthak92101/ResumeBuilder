@@ -28,6 +28,7 @@
   max-width: 1100px;
   margin: 0 auto;
   padding: 1.5rem;
+  animation: motion-page-enter 420ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
 }
 
 // ── Header ────────────────────────────────────────────────────────────────────
@@ -83,6 +84,7 @@
   border-radius: $radius-md;
   padding: 1.5rem;
   box-shadow: $shadow-card;
+  animation: motion-page-enter 300ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
 }
 
 .voice-question-meta {
@@ -250,6 +252,7 @@
   border-radius: $radius-md;
   padding: 1rem 1.25rem;
   box-shadow: $shadow-card;
+  animation: motion-page-enter 240ms ease-out both;
 
   h3 {
     font-size: 0.72rem;
@@ -302,6 +305,7 @@
   color: $danger;
   font-size: 0.82rem;
   font-weight: 500;
+  animation: motion-toast-enter 200ms ease-out both;
 }
 
 // ── Feedback Panel ─────────────────────────────────────────────────────────────
@@ -316,6 +320,8 @@
 }
 
 .voice-feedback {
+  animation: motion-page-enter 300ms ease-out both;
+
   h3 {
     font-size: 0.85rem;
     font-weight: 700;
@@ -360,6 +366,10 @@
   flex-direction: column;
   gap: 0.3rem;
   transition: border-color 0.2s;
+  animation: motion-score-pop 320ms ease-out both;
+
+  &:nth-child(2) { animation-delay: 45ms; }
+  &:nth-child(3) { animation-delay: 90ms; }
 
   &:hover {
     border-color: rgba($accent, 0.3);

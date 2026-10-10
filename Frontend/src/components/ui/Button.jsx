@@ -1,9 +1,9 @@
 const variantStyles = {
   primary: {
     background: 'var(--color-accent)',
-    color: '#fff',
+    color: 'var(--color-on-accent)',
     border: '1px solid var(--color-accent)',
-    boxShadow: '0 2px 5px rgba(20, 70, 120, 0.16)',
+    boxShadow: '0 2px 5px rgba(101, 88, 232, 0.16)',
   },
   secondary: {
     background: 'transparent',

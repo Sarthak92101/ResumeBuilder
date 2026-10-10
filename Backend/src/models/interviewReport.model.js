@@ -119,6 +119,30 @@ const preparationPlanSchema = new mongoose.Schema({
 }, {
   _id: false
 })
+
+const proofAttemptSchema = new mongoose.Schema({
+  answer: { type: String, required: true, maxlength: 4000 },
+  evidenceNote: { type: String, default: "", maxlength: 1500 },
+  evidenceUrl: { type: String, default: "", maxlength: 500 },
+  status: {
+    type: String,
+    enum: ["clear_explanation", "needs_detail"],
+    required: true,
+  },
+  summary: { type: String, required: true, maxlength: 1200 },
+  strengths: { type: [String], default: [] },
+  missingDetails: { type: [String], default: [] },
+  nextQuestion: { type: String, default: "", maxlength: 1000 },
+}, { timestamps: true })
+
+const proofClaimSchema = new mongoose.Schema({
+  claim: { type: String, required: true, maxlength: 500 },
+  sourceText: { type: String, default: "", maxlength: 700 },
+  skill: { type: String, required: true, maxlength: 100 },
+  challengeQuestion: { type: String, required: true, maxlength: 500 },
+  attempts: { type: [proofAttemptSchema], default: [] },
+})
+
 const mentorCommentSchema = new mongoose.Schema({
   author: { type: String, default: "Anonymous Mentor" },
   text: { type: String, required: true },
@@ -159,6 +183,7 @@ const interviewReportSchema = new mongoose.Schema({
   behaviouralQuestions: [BehaviouralQuestionSchema],
   skillGaps: [skillGapSchema],
   preparationPlan: [preparationPlanSchema],
+  proofClaims: { type: [proofClaimSchema], default: [] },
   user:{
     type:mongoose.Schema.Types.ObjectId,
     ref:"user",

@@ -14,6 +14,7 @@ const Toast = ({ message, tone = 'neutral', onClose }) => {
 
   return (
     <div
+      className="ui-toast"
       role="status"
       style={{
         display: 'inline-flex',

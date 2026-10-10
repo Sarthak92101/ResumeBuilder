@@ -63,9 +63,9 @@ function isSectionHeading(line) {
   const t = cleanLine(line)
   if (!t || t.length > 55) return false
 
-  if (/^(#{1,3}\s*)?[A-Z][A-Za-z\s/&-]+:?\s*$/.test(t)) return true
+  if (/^(#{1,3}\s*)?[A-Z][A-Z\s/&-]+:?\s*$/.test(t)) return true
 
-  return /^(summary|objective|profile|experience|work history|employment|education|skills|technical skills|projects|achievements|certifications|contact|strengths|hobbies|internship)/i.test(
+  return /^(summary|professional summary|career summary|objective|profile|experience|professional experience|work experience|work history|employment|education|skills|technical skills|technical expertise|projects|selected projects|achievements|certifications|contact|strengths|hobbies|internship|leadership|awards|languages|volunteer(?:ing)?|publications|references|extracurricular)/i.test(
     t.replace(/:$/, "")
   )
 }
@@ -90,7 +90,13 @@ function parseResumeDocument(text) {
   }
 
   while (i < lines.length && !isSectionHeading(lines[i])) {
-    if (!headline && lines[i].length < 90 && i === 1) {
+    const line = lines[i]
+    const looksLikeContact = /[\w.+-]+@[\w.-]+\.\w+/.test(line) ||
+      /linkedin|github|portfolio|https?:\/\//i.test(line) ||
+      ((line.match(/\d/g) || []).length >= 10) ||
+      (line.length < 60 && line.includes(",") && !/[.!?]$/.test(line))
+
+    if (!headline && line.length < 90 && i === 1 && !looksLikeContact) {
       headline = lines[i]
       i++
       continue
@@ -519,4 +525,85 @@ function buildProfessionalResumeHtml(report) {
 </html>`
 }
 
-module.exports = { buildProfessionalResumeHtml, WATERMARK }
+function escapeLatex(value) {
+  const replacements = {
+    "\\": "\\textbackslash{}",
+    "{": "\\{",
+    "}": "\\}",
+    "$": "\\$",
+    "&": "\\&",
+    "%": "\\%",
+    "#": "\\#",
+    "_": "\\_",
+    "~": "\\textasciitilde{}",
+    "^": "\\textasciicircum{}",
+  }
+
+  return String(value ?? "").replace(/[\\{}$&%#_~^]/g, (character) => replacements[character])
+}
+
+function buildLatexSection(section) {
+  const lines = (section.lines || []).map(cleanLine).filter(Boolean)
+  if (!lines.length) return ""
+
+  const title = escapeLatex(section.title)
+  if (/skill/i.test(section.title)) {
+    return `\\section*{${title}}\n\\noindent ${lines.map(escapeLatex).join(" \\textbullet{} ")}\\par\n`
+  }
+
+  if (/summary|objective|profile/i.test(section.title)) {
+    return `\\section*{${title}}\n\\noindent ${lines.map(escapeLatex).join("\\\\[2pt]\n")}\\par\n`
+  }
+
+  const bullets = lines.map((line) => `  \\item ${escapeLatex(line)}`).join("\n")
+  return `\\section*{${title}}\n\\begin{itemize}[leftmargin=1.2em,itemsep=2pt,topsep=3pt]\n${bullets}\n\\end{itemize}\n`
+}
+
+function buildProfessionalResumeLatex(report) {
+  const doc = parseResumeDocument(report.resume || "")
+  const name = escapeLatex(doc.name || "Professional")
+  const headline = escapeLatex(report.title || doc.headline || "")
+  const contactItems = [doc.contact.email, doc.contact.phone, doc.contact.location, ...(doc.contact.links || [])]
+    .map((item) => String(item || "").trim())
+    .filter(Boolean)
+  const contactLine = contactItems.length
+    ? `\\small ${contactItems.map(escapeLatex).join(" \\textbar{} ")}\\par\n`
+    : ""
+  const sections = (doc.sections || []).map(buildLatexSection).filter(Boolean).join("\n")
+  const fallbackSection = !sections && report.resume
+    ? `\\section*{Profile}\n\\noindent ${escapeLatex(report.resume)}\\par\n`
+    : ""
+
+  return String.raw`\documentclass[10pt,a4paper]{article}
+\usepackage[margin=0.68in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+\definecolor{brand}{HTML}{5345D0}
+\definecolor{bodytext}{HTML}{283044}
+\definecolor{muted}{HTML}{657084}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\color{bodytext}
+\titleformat{\section}{\large\bfseries\color{brand}}{}{0pt}{}[\vspace{-3pt}\titlerule]
+\titlespacing*{\section}{0pt}{12pt}{6pt}
+\setlist[itemize]{leftmargin=1.2em,itemsep=2pt,topsep=3pt,parsep=0pt}
+\begin{document}
+\begin{center}
+  {\LARGE\bfseries ${name}}\\[3pt]
+  ${headline ? `{\\normalsize\\color{brand} ${headline}}\\par` : ""}
+  ${contactLine.trim()}
+\end{center}
+\vspace{-4pt}
+\hrule
+\vspace{8pt}
+${sections || fallbackSection}
+\end{document}
+`
+}
+
+module.exports = { buildProfessionalResumeHtml, buildProfessionalResumeLatex, parseResumeDocument, WATERMARK }

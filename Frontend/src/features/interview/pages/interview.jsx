@@ -1,12 +1,14 @@
-import React, { useState } from 'react'
+import React, { lazy, Suspense, useEffect, useId, useState } from 'react'
 import '../style/interview.scss'
 import { useInterview } from '../hooks/useInterview.js'
 import { useParams, Link } from 'react-router'
 import AppNavbar from '../../../components/AppNavbar'
 import { Button } from '../../../components/ui'
-import { shareReport, getStarCheck } from '../services/interview.api'
-import CodeRunner from '../components/CodeRunner'
+import { shareReport, getStarCheck, checkProofClaim as checkProofClaimApi } from '../services/interview.api'
 import GrammarCheck from '../components/GrammarCheck'
+import LoadingExperience from '../../../components/ui/LoadingExperience.jsx'
+
+const CodeRunner = lazy(() => import('../components/CodeRunner'))
 
 
 const STAR_LABELS = [
@@ -20,16 +22,34 @@ const NAV_ITEMS = [
     { id: 'technical', label: 'Technical Questions', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>) },
     { id: 'behavioral', label: 'Behavioral Questions', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>) },
     { id: 'roadmap', label: 'Road Map', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11" /></svg>) },
+    { id: 'proof', label: 'Resume Proof Check', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>) },
 ]
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 const QuestionCard = ({ item, index }) => {
     const [ open, setOpen ] = useState(false)
+    const [bodyMounted, setBodyMounted] = useState(false)
     const [copied, setCopied] = useState(false)
     const [practiceAnswer, setPracticeAnswer] = useState('')
     const [starFeedback, setStarFeedback] = useState(null)
     const [starLoading, setStarLoading] = useState(false)
     const [starError, setStarError] = useState('')
+    const answerId = useId()
+
+    useEffect(() => {
+        if (open || !bodyMounted) return undefined
+        const timer = window.setTimeout(() => setBodyMounted(false), 280)
+        return () => window.clearTimeout(timer)
+    }, [open, bodyMounted])
+
+    const toggleOpen = () => {
+        if (open) {
+            setOpen(false)
+            return
+        }
+        setBodyMounted(true)
+        window.requestAnimationFrame(() => setOpen(true))
+    }
 
     const difficultyClass = item.difficulty === 'Easy' ? 'badge--low' : item.difficulty === 'Hard' ? 'badge--high' : 'badge--mid'
 
@@ -65,69 +85,79 @@ const QuestionCard = ({ item, index }) => {
 
     return (
         <div className='q-card'>
-            <div className='q-card__header' onClick={() => setOpen(o => !o)}>
-                <span className='q-card__index'>Q{index + 1}</span>
-                <p className='q-card__question'>{item.question}</p>
-                <span className={`q-card__badge ${difficultyClass}`}>{item.difficulty || 'Medium'}</span>
-                <button type='button' className='copy-btn' onClick={(e) => { e.stopPropagation(); onCopy(item.question) }} title='Copy question'>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <div
+                className='q-card__header'
+            >
+                <button type='button' className='q-card__toggle' onClick={toggleOpen} aria-expanded={open} aria-controls={answerId}>
+                    <span className='q-card__index'>Q{index + 1}</span>
+                    <span className='q-card__question'>{item.question}</span>
+                    <span className={`q-card__badge ${difficultyClass}`}>{item.difficulty || 'Medium'}</span>
+                    <span className={`q-card__chevron ${open ? 'q-card__chevron--open' : ''}`}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+                    </span>
                 </button>
-                <span className={`q-card__chevron ${open ? 'q-card__chevron--open' : ''}`}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
-                </span>
+                <button type='button' className='copy-btn' onClick={() => onCopy(item.question)} title='Copy question' aria-label='Copy question'>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
             </div>
-            {open && (
-                <div className='q-card__body'>
-                    <div className='q-card__section'>
-                        <span className='q-card__tag q-card__tag--intention'>Intention</span>
-                        <p>{item.intention}</p>
-                    </div>
-                    <div className='q-card__section'>
-                        <span className='q-card__tag q-card__tag--answer'>Model Answer</span>
-                        <p>{item.answer}</p>
-                    </div>
+            {bodyMounted && (
+                <div id={answerId} className={`q-card__body-wrap ${open ? 'q-card__body-wrap--open' : ''}`} aria-hidden={!open} inert={!open}>
+                    <div className='q-card__body-inner'>
+                        <div className='q-card__body'>
+                            <div className='q-card__section'>
+                                <span className='q-card__tag q-card__tag--intention'>Intention</span>
+                                <p>{item.intention}</p>
+                            </div>
+                            <div className='q-card__section'>
+                                <span className='q-card__tag q-card__tag--answer'>Model Answer</span>
+                                <p>{item.answer}</p>
+                            </div>
 
-                    {isCodingQuestion && (
-                        <div className='q-card__section'>
-                            <CodeRunner questionId={item._id} />
-                        </div>
-                    )}
-
-                    <div className='q-card__section'>
-                        <span className='q-card__tag q-card__tag--practice'>Practice Answer</span>
-                        <textarea
-                            className='star-textarea'
-                            value={practiceAnswer}
-                            onChange={(e) => setPracticeAnswer(e.target.value)}
-                            rows={4}
-                            placeholder='Write your own answer here, then check the STAR framework and grammar...'
-                        />
-                        <div className='star-actions'>
-                            <Button size='sm' variant='secondary' onClick={onCheckStar} disabled={starLoading}>
-                                {starLoading ? 'Checking...' : 'Check STAR'}
-                            </Button>
-                            <span className='star-hint'>Situation, Task, Action, Result</span>
-                        </div>
-                        <GrammarCheck text={practiceAnswer} />
-
-                        {starError && <div className='star-error'>{starError}</div>}
-
-                        {starFeedback && (
-                            <div className='star-result'>
-                                <div className='star-result__row'>
-                                    {STAR_LABELS.map(({ key, label }) => (
-                                        <span key={key} className={`star-label ${starFeedback[key] ? 'star-label--ok' : 'star-label--no'}`}>
-                                            {label}: {starFeedback[key] ? 'Yes' : 'No'}
-                                        </span>
-                                    ))}
+                            {isCodingQuestion && (
+                                <div className='q-card__section'>
+                                    <Suspense fallback={<div className='code-runner-loading' role='status'><span className='code-runner-loading__spinner' aria-hidden='true' />Preparing your coding workspace…</div>}>
+                                        <CodeRunner questionId={item._id} />
+                                    </Suspense>
                                 </div>
-                                {starFeedback.improvementAdvice && (
-                                    <p className='star-result__advice'>
-                                        <strong>Improvement:</strong> {starFeedback.improvementAdvice}
-                                    </p>
+                            )}
+
+                            <div className='q-card__section'>
+                                <span className='q-card__tag q-card__tag--practice'>Practice Answer</span>
+                                <textarea
+                                    className='star-textarea'
+                                    value={practiceAnswer}
+                                    onChange={(e) => setPracticeAnswer(e.target.value)}
+                                    rows={4}
+                                    placeholder='Write your own answer here, then check the STAR framework and grammar...'
+                                />
+                                <div className='star-actions'>
+                                    <Button size='sm' variant='secondary' onClick={onCheckStar} disabled={starLoading}>
+                                        {starLoading ? 'Checking...' : 'Check STAR'}
+                                    </Button>
+                                    <span className='star-hint'>Situation, Task, Action, Result</span>
+                                </div>
+                                <GrammarCheck text={practiceAnswer} />
+
+                                {starError && <div className='star-error'>{starError}</div>}
+
+                                {starFeedback && (
+                                    <div className='star-result'>
+                                        <div className='star-result__row'>
+                                            {STAR_LABELS.map(({ key, label }) => (
+                                                <span key={key} className={`star-label ${starFeedback[key] ? 'star-label--ok' : 'star-label--no'}`}>
+                                                    {label}: {starFeedback[key] ? 'Yes' : 'No'}
+                                                </span>
+                                            ))}
+                                        </div>
+                                        {starFeedback.improvementAdvice && (
+                                            <p className='star-result__advice'>
+                                                <strong>Improvement:</strong> {starFeedback.improvementAdvice}
+                                            </p>
+                                        )}
+                                    </div>
                                 )}
                             </div>
-                        )}
+                        </div>
                     </div>
                 </div>
             )}
@@ -153,6 +183,89 @@ const RoadMapDay = ({ day }) => (
     </div>
 )
 
+const ProofClaimCard = ({ interviewId, claim, onUpdate }) => {
+    const latestAttempt = claim.attempts?.[claim.attempts.length - 1]
+    const claimText = claim.claim?.replace(/\s+/g, ' ').trim().toLowerCase()
+    const sourceText = claim.sourceText?.replace(/\s+/g, ' ').trim().toLowerCase()
+    const showSource = claim.sourceText && sourceText !== claimText
+    const [answer, setAnswer] = useState(latestAttempt?.answer || '')
+    const [evidenceNote, setEvidenceNote] = useState(latestAttempt?.evidenceNote || '')
+    const [evidenceUrl, setEvidenceUrl] = useState(latestAttempt?.evidenceUrl || '')
+    const [feedback, setFeedback] = useState(latestAttempt || null)
+    const [checking, setChecking] = useState(false)
+    const [error, setError] = useState('')
+
+    useEffect(() => {
+        const latest = claim.attempts?.[claim.attempts.length - 1] || null
+        setAnswer(latest?.answer || '')
+        setEvidenceNote(latest?.evidenceNote || '')
+        setEvidenceUrl(latest?.evidenceUrl || '')
+        setFeedback(latest)
+    }, [claim])
+
+    const handleCheck = async () => {
+        if (!answer.trim()) {
+            setError('Pehle apna jawab likho, phir SkillMirror us par feedback dega.')
+            return
+        }
+
+        setChecking(true)
+        setError('')
+        try {
+            const response = await checkProofClaimApi(interviewId, claim._id, {
+                answer,
+                evidenceNote,
+                evidenceUrl,
+            })
+            onUpdate(response.proofClaim)
+        } catch (requestError) {
+            setError(requestError.response?.data?.message || 'Proof check abhi complete nahi hua. Dobara try karo.')
+        } finally {
+            setChecking(false)
+        }
+    }
+
+    return (
+        <article className='proof-claim-card' aria-busy={checking}>
+            <div className='proof-claim-card__heading'>
+                <span className='proof-claim-card__skill'>{claim.skill}</span>
+                {feedback && <span className={`proof-claim-status proof-claim-status--${feedback.status}`}>
+                    {feedback.status === 'clear_explanation' ? 'Clear explanation' : 'Needs more detail'}
+                </span>}
+            </div>
+            <h3>{claim.claim}</h3>
+            {showSource && <blockquote className='proof-claim-card__source'>Resume line: “{claim.sourceText}”</blockquote>}
+            <p className='proof-claim-card__question'>{claim.challengeQuestion}</p>
+
+            <label className='proof-claim-field'>
+                <span>Your answer</span>
+                <textarea value={answer} onChange={(event) => setAnswer(event.target.value)} rows={4} maxLength={4000} placeholder='What did you do, how did you measure it, and what changed?' />
+            </label>
+            <label className='proof-claim-field'>
+                <span>Evidence note <small>(optional)</small></span>
+                <textarea value={evidenceNote} onChange={(event) => setEvidenceNote(event.target.value)} rows={2} maxLength={1500} placeholder='Add context, a metric, or where to find the proof.' />
+            </label>
+            <label className='proof-claim-field'>
+                <span>Project or evidence link <small>(optional)</small></span>
+                <input type='url' value={evidenceUrl} onChange={(event) => setEvidenceUrl(event.target.value)} maxLength={500} placeholder='https://…' />
+            </label>
+
+            {error && <p className='proof-claim-error' role='alert'>{error}</p>}
+            <Button variant='primary' size='sm' onClick={handleCheck} disabled={checking}>
+                {checking ? 'Checking answer…' : 'Check my answer'}
+            </Button>
+
+            {feedback && <div key={`${claim._id}-${feedback.answer}-${feedback.summary}`} className='proof-claim-feedback' aria-live='polite'>
+                <p>{feedback.summary}</p>
+                {feedback.strengths?.length > 0 && <div><strong>Strong points</strong><ul>{feedback.strengths.map((item, index) => <li key={index}>{item}</li>)}</ul></div>}
+                {feedback.missingDetails?.length > 0 && <div><strong>Add more detail</strong><ul>{feedback.missingDetails.map((item, index) => <li key={index}>{item}</li>)}</ul></div>}
+                {feedback.nextQuestion && <p><strong>Next practice question:</strong> {feedback.nextQuestion}</p>}
+                <small>Ye jawab ki clarity par feedback hai; link ya achievement ko independently verify nahi kiya gaya.</small>
+            </div>}
+        </article>
+    )
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 const Interview = () => {
     const [ activeNav, setActiveNav ] = useState('technical')
@@ -161,13 +274,18 @@ const Interview = () => {
     const [ pdfLoading, setPdfLoading ] = useState(false)
     const [shareLoading, setShareLoading] = useState(false)
     const [shareToken, setShareToken] = useState(null)
+    const [proofClaims, setProofClaims] = useState(report?.proofClaims || [])
+
+    useEffect(() => {
+        setProofClaims(report?.proofClaims || [])
+    }, [report])
 
     const handleDownloadPdf = async (type) => {
         try {
             setPdfLoading(true)
             await getResumePdf(interviewId, type)
-        } catch {
-            alert("Failed to generate PDF. Please try again.")
+        } catch (error) {
+            alert(error.response?.data?.message || error.message || "Failed to generate PDF. Please try again.")
         } finally {
             setPdfLoading(false)
         }
@@ -190,11 +308,7 @@ const Interview = () => {
 
 
     if (loading || !report) {
-        return (
-            <main className='loading-screen'>
-                <h1>Loading your interview plan...</h1>
-            </main>
-        )
+        return <LoadingExperience title='Building your interview room' detail='Loading your role-specific questions, practice plan, and next steps.' />
     }
 
     const scoreColor =
@@ -242,7 +356,7 @@ const Interview = () => {
                             </Button>
                         </Link>
 
-                        <p className='interview-nav__downloads-label' style={{ marginTop: '1rem' }}>Export PDF</p>
+                        <p className='interview-nav__downloads-label'>Export PDF</p>
                         <div className='interview-nav__download-row'>
                             <Button
                                 type='button'
@@ -328,6 +442,28 @@ const Interview = () => {
                             </div>
                         </section>
                     )}
+
+                    {activeNav === 'proof' && (
+                        <section>
+                            <div className='content-header'>
+                                <h2>Resume Proof Check</h2>
+                                <span className='content-header__count'>{proofClaims.length} claims</span>
+                            </div>
+                            <p className='proof-check-intro'>Resume ke real claims par interviewer-style sawaal practice karo. SkillMirror tumhare jawab ki clarity check karega; ye tumhare achievement ki sachchai verify nahi karta.</p>
+                            {proofClaims.length ? (
+                                <div className='proof-claim-list'>
+                                    {proofClaims.map((claim) => <ProofClaimCard
+                                        key={claim._id}
+                                        interviewId={interviewId}
+                                        claim={claim}
+                                        onUpdate={(updatedClaim) => setProofClaims((current) => current.map((item) => item._id === updatedClaim._id ? updatedClaim : item))}
+                                    />)}
+                                </div>
+                            ) : (
+                                <div className='proof-check-empty'>Is report mein resume claims nahi mile. Resume ke saath naya interview plan banao, phir yahan claims par practice kar paoge.</div>
+                            )}
+                        </section>
+                    )}
                 </main>
 
                 <div className='interview-divider' />
@@ -366,4 +502,4 @@ const Interview = () => {
     )
 }
 
-export default Interview 
+export default Interview

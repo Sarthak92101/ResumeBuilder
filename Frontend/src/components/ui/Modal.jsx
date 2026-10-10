@@ -15,7 +15,11 @@ const Modal = ({ open, onClose, title, children, className = '', style }) => {
         const focusable = dialogRef.current.querySelectorAll(
           'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
         )
-        if (!focusable.length) return
+        if (!focusable.length) {
+          event.preventDefault()
+          dialogRef.current.focus()
+          return
+        }
         const first = focusable[0]
         const last = focusable[focusable.length - 1]
         if (event.shiftKey && document.activeElement === first) {
@@ -30,7 +34,8 @@ const Modal = ({ open, onClose, title, children, className = '', style }) => {
 
     document.addEventListener('keydown', handleKeyDown)
     const focusTarget = dialogRef.current?.querySelector('button, input, textarea, select')
-    focusTarget?.focus()
+    if (focusTarget) focusTarget.focus()
+    else dialogRef.current?.focus()
 
     return () => {
       document.body.style.overflow = previousOverflow
@@ -42,6 +47,7 @@ const Modal = ({ open, onClose, title, children, className = '', style }) => {
 
   return (
     <div
+      className="ui-modal-backdrop"
       onClick={onClose}
       style={{
         position: 'fixed',
@@ -55,6 +61,7 @@ const Modal = ({ open, onClose, title, children, className = '', style }) => {
     >
       <div
         ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}

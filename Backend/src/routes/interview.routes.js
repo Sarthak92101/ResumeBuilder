@@ -40,6 +40,12 @@ interviewRouter.post(
   interviewController.starCheckController
 )
 
+interviewRouter.post(
+  "/report/:interviewId/proof-claims/:claimId/check",
+  authMiddleware.authUser,
+  interviewController.checkProofClaimController
+)
+
 interviewRouter.get(
   "/report/:interviewId/pdf",
   authMiddleware.authUser,
@@ -69,6 +75,13 @@ interviewRouter.post(
   "/voice-feedback",
   authMiddleware.authUser,
   interviewController.voiceFeedbackController
+)
+
+// ── Separate CV-based avatar interview (text answers; voice mock stays separate) ──
+interviewRouter.post(
+  "/avatar-interview",
+  authMiddleware.authUser,
+  interviewController.avatarInterviewController
 )
 
 // ── Feature 2: Gap Analysis ───────────────────────────────────────────────────

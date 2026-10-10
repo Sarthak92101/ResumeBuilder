@@ -1,13 +1,25 @@
 import React, { useEffect, useState, useContext } from 'react'
+import { Link } from 'react-router-dom'
 import AppNavbar from '../../../components/AppNavbar'
 import { listResumes, createAtsScore } from '../services/resume.api'
 import { ThemeContext } from '../../theme/ThemeContext'
-import { RadialBarChart, RadialBar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 import { Card, Button, Select, Textarea, PageHeader, Badge } from '../../../components/ui'
+import './resume.scss'
+
+const BREAKDOWN_ITEMS = [
+  { name: 'Keyword match', key: 'keywordMatch' },
+  { name: 'Formatting', key: 'formatting' },
+  { name: 'Achievements', key: 'achievements' },
+  { name: 'Action verbs', key: 'actionVerbs' },
+  { name: 'Section completeness', key: 'sectionCompleteness' },
+]
 
 const AtsScoreChecker = () => {
   const { theme } = useContext(ThemeContext)
   const [resumes, setResumes] = useState([])
+  const [resumesLoading, setResumesLoading] = useState(true)
+  const [resumeListError, setResumeListError] = useState('')
+  const [resumeRetry, setResumeRetry] = useState(0)
   const [selected, setSelected] = useState('')
   const [jobDesc, setJobDesc] = useState('')
   const [loading, setLoading] = useState(false)
@@ -15,17 +27,24 @@ const AtsScoreChecker = () => {
   const [error, setError] = useState('')
 
   useEffect(() => {
+    let cancelled = false
     async function load() {
+      setResumesLoading(true)
+      setResumeListError('')
       try {
         const res = await listResumes()
+        if (cancelled) return
         setResumes(res.resumes || [])
         if ((res.resumes || []).length) setSelected(res.resumes[0]._id)
-      } catch (e) {
-        console.error(e)
+      } catch (error) {
+        if (!cancelled) setResumeListError(error?.response?.data?.message || 'We couldn’t load your saved resumes.')
+      } finally {
+        if (!cancelled) setResumesLoading(false)
       }
     }
     load()
-  }, [])
+    return () => { cancelled = true }
+  }, [resumeRetry])
 
   const onSubmit = async (e) => {
     e.preventDefault()
@@ -45,93 +64,148 @@ const AtsScoreChecker = () => {
     }
   }
 
-  const breakdownData = result ? [
-    { name: 'Keyword Match', value: result.breakdown?.keywordMatch ?? 0 },
-    { name: 'Formatting', value: result.breakdown?.formatting ?? 0 },
-    { name: 'Achievements', value: result.breakdown?.achievements ?? 0 },
-    { name: 'Action Verbs', value: result.breakdown?.actionVerbs ?? 0 },
-    { name: 'Sections', value: result.breakdown?.sectionCompleteness ?? 0 },
-  ] : []
+  const overallScore = Math.max(0, Math.min(100, Math.round(Number(result?.overallScore) || 0)))
+  const scoreTone = overallScore >= 80 ? 'strong' : overallScore >= 60 ? 'moderate' : 'needs-work'
+  const hasJobDescription = Boolean(jobDesc.trim())
+  const scoreHeadline = hasJobDescription
+    ? (scoreTone === 'strong' ? 'Strong role match' : scoreTone === 'moderate' ? 'Good starting point' : 'Room to improve')
+    : (scoreTone === 'strong' ? 'Strong resume profile' : scoreTone === 'moderate' ? 'Good foundation' : 'Needs refinement')
+  const scoreDescription = hasJobDescription
+    ? 'This estimate compares your resume with the role description you provided.'
+    : 'This estimate looks at general resume structure and content.'
 
   return (
     <div className="page-shell">
       <AppNavbar />
-      <main className={`container ${theme === 'dark' ? 'theme-dark' : ''}`}>
-        <PageHeader title="ATS Score Checker" subtitle="Measure how well your resume aligns with a target role and job description." />
+      <main className={`container resume-tool-page ${theme === 'dark' ? 'theme-dark' : ''}`} aria-busy={loading || resumesLoading}>
+        <PageHeader
+          title="ATS Score Checker"
+          subtitle="See where your resume matches the role and what you could improve. Treat this score as guidance, not a hiring prediction."
+          action={<Link to="/resumes" className="resume-tool-link">Manage resumes <span aria-hidden="true">→</span></Link>}
+        />
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(280px, 0.8fr)', gap: 'var(--space-4)', alignItems: 'start' }}>
-          <Card style={{ padding: 'var(--space-5)' }}>
-            <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-              <Select label="Select Resume" value={selected} onChange={(e) => setSelected(e.target.value)}>
+        <div className={`ats-layout ${result ? 'ats-layout--with-breakdown' : ''}`}>
+          <Card className="resume-tool-card ats-form-card">
+            <form onSubmit={onSubmit} className="resume-tool-form">
+              {resumesLoading && <div className="resume-list-status" role="status"><span className="resume-tool-spinner" aria-hidden="true" /> Loading saved resumes…</div>}
+              {resumeListError && <div className="resume-tool-error" role="alert"><span>{resumeListError}</span><Button type="button" variant="secondary" size="sm" onClick={() => setResumeRetry((key) => key + 1)}>Try again</Button></div>}
+              {resumes.length === 0 && !resumesLoading && !resumeListError && (
+                <div className="resume-tool-empty-hint">
+                  <strong>Upload a resume to get started</strong>
+                  <span>Your saved PDF resumes will appear here.</span>
+                  <Link to="/resumes">Go to My Resumes <span aria-hidden="true">→</span></Link>
+                </div>
+              )}
+              <Select label="Select Resume" value={selected} disabled={loading || resumesLoading} onChange={(e) => { setSelected(e.target.value); setResult(null) }}>
                 <option value="">-- choose --</option>
                 {resumes.map(r => (
                   <option key={r._id} value={r._id}>{r.fileName} — {new Date(r.createdAt).toLocaleDateString()}</option>
                 ))}
               </Select>
 
-              <Textarea label="Job Description (optional)" value={jobDesc} onChange={(e) => setJobDesc(e.target.value)} rows={8} />
+              <Textarea label="Job Description (optional)" value={jobDesc} disabled={loading} onChange={(e) => { setJobDesc(e.target.value); setResult(null) }} rows={8} placeholder="Paste the role description for a more targeted score..." />
 
-              <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-                <Button type="submit" variant="primary" disabled={loading}>{loading ? 'Checking…' : 'Check ATS Score'}</Button>
+              <div className="resume-tool-actions">
+                <Button type="submit" variant="primary" disabled={loading || !selected}>{loading ? 'Checking resume…' : 'Check ATS score'}{loading && <span className="resume-tool-spinner" aria-hidden="true" />}</Button>
                 <Button type="button" variant="secondary" onClick={() => { setJobDesc(''); setResult(null); setError('') }} disabled={loading}>Reset</Button>
               </div>
 
-              {error && <div style={{ padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', background: 'rgba(229,72,77,0.08)', color: 'var(--color-danger)', border: '1px solid rgba(229,72,77,0.2)' }}>{error}</div>}
+              {error && <div className="resume-tool-error" role="alert"><strong>We couldn’t check this resume.</strong><span>{error}</span></div>}
             </form>
           </Card>
 
-          <Card style={{ padding: 'var(--space-5)', minHeight: '220px' }}>
+          <Card className="resume-tool-card ats-result-card">
             {!result && (
-              <div style={{ color: 'var(--color-text-secondary)' }}>Results will appear here after running the checker.</div>
+              <div className="ats-result-placeholder">
+                <span className="ats-result-placeholder__icon" aria-hidden="true">%</span>
+                <strong>{loading ? 'Checking your resume' : 'Your score will appear here'}</strong>
+                <span>{loading ? 'Comparing resume content and structure with your selected role…' : 'Choose a resume and run the checker to see a score and suggestions.'}</span>
+                {loading && <span className="resume-tool-spinner" aria-hidden="true" />}
+              </div>
             )}
 
             {result && (
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
-                  <h3 style={{ margin: 0 }}>Overall Score</h3>
-                  <Badge tone={Number(result.overallScore) >= 80 ? 'success' : Number(result.overallScore) >= 60 ? 'warning' : 'danger'}>{Number(result.overallScore || 0)}</Badge>
+              <div className="ats-score-content">
+                <div className="ats-result-heading">
+                  <div><span>RESUME ANALYSIS</span><h2>Your ATS estimate</h2></div>
+                  <Badge tone="neutral">Guidance</Badge>
                 </div>
 
-                <div style={{ width: '100%', height: 180, position: 'relative' }}>
-                  <ResponsiveContainer>
-                    <RadialBarChart innerRadius="80%" outerRadius="100%" data={[{ name: 'score', value: Number(result.overallScore) || 0 }]} startAngle={180} endAngle={-180}>
-                      <RadialBar minAngle={15} background clockWise={false} dataKey="value" fill="var(--color-accent)" />
-                    </RadialBarChart>
-                  </ResponsiveContainer>
+                <div className={`ats-score-overview ats-score-overview--${scoreTone}`}>
+                  <div
+                    className="ats-score-gauge"
+                    style={{ '--ats-progress': `${overallScore}%` }}
+                    role="img"
+                    aria-label={`ATS estimate: ${overallScore} out of 100`}
+                  >
+                    <div className="ats-score-gauge__center">
+                      <strong>{overallScore}</strong>
+                      <span>out of 100</span>
+                    </div>
+                  </div>
+                  <div className="ats-score-summary">
+                    <span className="ats-score-summary__label">{scoreHeadline}</span>
+                    <p>{scoreDescription}</p>
+                    <div className="ats-score-summary__keywords">
+                      <strong>{hasJobDescription ? (result.missingKeywords || []).length : '—'}</strong>
+                      <span>{hasJobDescription ? 'keywords to review' : 'add a role for keyword matching'}</span>
+                    </div>
+                  </div>
                 </div>
 
-                <h4 style={{ marginBottom: 'var(--space-2)' }}>Missing Keywords</h4>
-                <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', marginBottom: 'var(--space-4)' }}>
-                  {(result.missingKeywords || []).length ? result.missingKeywords.map((k, i) => (
-                    <Badge key={i} tone="neutral">{k}</Badge>
-                  )) : <span style={{ color: 'var(--color-text-secondary)' }}>None detected</span>}
-                </div>
+                <section className="ats-result-section">
+                  <div className="ats-result-section__heading">
+                    <div><span>KEYWORD GAPS</span><h3>Terms to review</h3></div>
+                    <span className="ats-result-section__count">{hasJobDescription ? (result.missingKeywords || []).length : '—'}</span>
+                  </div>
+                  {!hasJobDescription ? (
+                    <p className="ats-result-empty">Add a job description to see role-specific keywords that may be missing.</p>
+                  ) : (result.missingKeywords || []).length ? (
+                    <div className="ats-keyword-list">
+                      {result.missingKeywords.map((keyword, index) => <span key={`${keyword}-${index}`}>{keyword}</span>)}
+                    </div>
+                  ) : (
+                    <p className="ats-result-empty">No missing keywords were identified for this analysis.</p>
+                  )}
+                </section>
 
-                <h4 style={{ marginBottom: 'var(--space-2)' }}>Suggestions</h4>
-                <ul style={{ margin: 0, paddingLeft: 'var(--space-4)', color: 'var(--color-text-secondary)', lineHeight: 1.7 }}>
-                  {(result.suggestions || []).length ? result.suggestions.map((s, i) => (<li key={i}>{s}</li>)) : <li>No suggestions</li>}
-                </ul>
+                <section className="ats-result-section ats-result-section--suggestions">
+                  <div className="ats-result-section__heading">
+                    <div><span>NEXT STEPS</span><h3>Ways to strengthen your resume</h3></div>
+                  </div>
+                  {(result.suggestions || []).length ? (
+                    <ul className="ats-suggestion-list">
+                      {result.suggestions.map((suggestion, index) => <li key={`${suggestion}-${index}`}><span aria-hidden="true">↗</span><span>{suggestion}</span></li>)}
+                    </ul>
+                  ) : (
+                    <p className="ats-result-empty">No specific changes to suggest from this analysis.</p>
+                  )}
+                </section>
               </div>
             )}
           </Card>
+          {result && (
+            <Card className="resume-tool-card ats-breakdown-card">
+              <div className="ats-breakdown-heading">
+                <div><span>SCORE DETAILS</span><h2>What shaped this estimate</h2></div>
+                <p>Each area is scored from 0 to 100.</p>
+              </div>
+              <div className="ats-breakdown-list">
+                {BREAKDOWN_ITEMS.map(({ name, key }) => {
+                  const value = Math.max(0, Math.min(100, Math.round(Number(result.breakdown?.[key]) || 0)))
+                  return (
+                    <div className="ats-breakdown-item" key={key}>
+                      <div className="ats-breakdown-item__heading"><strong>{name}</strong><span>{value}<small>/100</small></span></div>
+                      <div className="ats-breakdown-item__track" role="meter" aria-label={`${name} score`} aria-valuemin="0" aria-valuemax="100" aria-valuenow={value}>
+                        <span style={{ width: `${value}%` }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </Card>
+          )}
         </div>
-
-        {result && (
-          <Card style={{ marginTop: 'var(--space-4)', padding: 'var(--space-5)' }}>
-            <h3 style={{ marginTop: 0 }}>Breakdown</h3>
-            <div style={{ width: '100%', height: 240 }}>
-              <ResponsiveContainer>
-                <BarChart data={breakdownData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
-                  <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" />
-                  <XAxis dataKey="name" stroke="var(--color-text-muted)" />
-                  <YAxis domain={[0, 100]} stroke="var(--color-text-muted)" />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="var(--color-accent)" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        )}
       </main>
     </div>
   )

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router'
 import { getSharedReport, addMentorComment } from '../services/interview.api'
 import { Button } from '../../../components/ui'
+import LoadingExperience from '../../../components/ui/LoadingExperience.jsx'
 import '../style/shared.scss'
 
 const SharedReport = () => {
@@ -50,17 +51,23 @@ const SharedReport = () => {
   }
 
   if (loading) {
-    return (
-      <main className='loading-screen'>
-        <h1>Loading shared report...</h1>
-      </main>
-    )
+    return <LoadingExperience title='Opening your shared report' detail='Getting the interview feedback ready to read and discuss.' />
   }
 
   if (error) {
     return (
-      <main className='loading-screen'>
-        <h1>{error}</h1>
+      <main className='loading-experience loading-experience--error' role='alert'>
+        <section className='loading-experience__card'>
+          <div className='loading-experience__brand'>
+            <span className='loading-experience__mark' aria-hidden='true'>SM</span>
+            <span>SkillMirror</span>
+          </div>
+          <div className='loading-experience__copy'>
+            <span className='loading-experience__eyebrow'>Shared report</span>
+            <h1>Couldn’t open this report</h1>
+            <p>{error}</p>
+          </div>
+        </section>
       </main>
     )
   }

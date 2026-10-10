@@ -9,6 +9,7 @@ const { fetchGitHubSummary } = require("../services/github.service")
 const { fetchLeetCodeSummary } = require("../services/leetcode.service")
 const { fetchCodeforcesSummary } = require("../services/codeforces.service")
 const crypto = require("crypto")
+const mongoose = require("mongoose")
 
 async function generateInterviewReportController(req, res) {
   try {
@@ -125,6 +126,7 @@ async function generateInterviewReportController(req, res) {
       behaviouralQuestions: interviewReportByAi.behaviouralQuestions,
       skillGaps: interviewReportByAi.skillGaps,
       preparationPlan: interviewReportByAi.preparationPlan,
+      proofClaims: interviewReportByAi.proofClaims || [],
       githubSummary,
       leetcodeSummary,
       codeforcesSummary,
@@ -251,7 +253,8 @@ async function downloadInterviewReportPdfController(req, res) {
     res.send(pdfBuffer)
   } catch (error) {
     console.error("PDF export error:", error.message)
-    res.status(500).json({
+    const status = error.code === "LATEX_COMPILER_MISSING" ? 503 : error.code === "LATEX_COMPILATION_TIMEOUT" ? 504 : 500
+    res.status(status).json({
       message: error.message || "Failed to generate PDF",
     })
   }
@@ -296,6 +299,66 @@ async function starCheckController(req, res) {
   }
 }
 
+async function checkProofClaimController(req, res) {
+  try {
+    const { interviewId, claimId } = req.params
+    const answer = String(req.body?.answer || "").trim()
+    const evidenceNote = String(req.body?.evidenceNote || "").trim()
+    const evidenceUrl = String(req.body?.evidenceUrl || "").trim()
+
+    if (!answer) {
+      return res.status(400).json({ message: "Write an answer before checking this claim" })
+    }
+    if (answer.length > 4000 || evidenceNote.length > 1500 || evidenceUrl.length > 500) {
+      return res.status(400).json({ message: "Answer or evidence is too long" })
+    }
+    if (evidenceUrl) {
+      try {
+        const parsedUrl = new URL(evidenceUrl)
+        if (!(["http:", "https:"].includes(parsedUrl.protocol))) throw new Error("Unsupported URL scheme")
+      } catch {
+        return res.status(400).json({ message: "Evidence link must be a valid HTTP or HTTPS URL" })
+      }
+    }
+
+    const report = await interviewReportModel.findOne({ _id: interviewId, user: req.user.id })
+    if (!report) {
+      return res.status(404).json({ message: "Interview report not found" })
+    }
+
+    const claim = report.proofClaims.id(claimId)
+    if (!claim) {
+      return res.status(404).json({ message: "Resume claim not found in this report" })
+    }
+
+    const { getProofClaimFeedback } = require("../services/ai.service")
+    const feedback = await getProofClaimFeedback({
+      claim: claim.claim,
+      sourceText: claim.sourceText,
+      skill: claim.skill,
+      challengeQuestion: claim.challengeQuestion,
+      answer,
+      evidenceNote,
+      evidenceUrl,
+      language: report.language,
+    })
+
+    claim.attempts.push({ answer, evidenceNote, evidenceUrl, ...feedback })
+    if (claim.attempts.length > 8) {
+      claim.attempts.splice(0, claim.attempts.length - 8)
+    }
+    await report.save()
+
+    res.status(200).json({
+      message: "Resume claim answer checked",
+      proofClaim: claim.toObject(),
+    })
+  } catch (error) {
+    console.error("Proof claim check error:", error)
+    res.status(500).json({ message: error.message || "Failed to check resume claim" })
+  }
+}
+
 // ── Feature 1: Voice Feedback ─────────────────────────────────────────────────
 async function voiceFeedbackController(req, res) {
   try {
@@ -313,6 +376,97 @@ async function voiceFeedbackController(req, res) {
   } catch (error) {
     console.error("Voice feedback error:", error)
     res.status(500).json({ message: error.message || "Failed to generate voice feedback" })
+  }
+}
+
+async function avatarInterviewController(req, res) {
+  const streamTurn = req.body?.stream === true && req.body?.action === "turn"
+
+  try {
+    const action = req.body?.action
+    const message = typeof req.body?.message === "string" ? req.body.message.trim() : ""
+    const resumeId = req.body?.resumeId
+    const targetRole = typeof req.body?.targetRole === "string" ? req.body.targetRole.trim().slice(0, 100) : ""
+    const language = ["hinglish", "en", "hi"].includes(req.body?.language) ? req.body.language : "hinglish"
+    const candidateIntro = typeof req.body?.candidateIntro === "string" ? req.body.candidateIntro.trim().slice(0, 500) : ""
+    const history = Array.isArray(req.body?.history)
+      ? req.body.history
+        .filter((item) => ["user", "assistant"].includes(item?.role) && typeof item?.content === "string")
+        .slice(-14)
+        .map(({ role, content }) => ({ role, content: content.trim().slice(0, 1200) }))
+        .filter((item) => item.content)
+      : []
+
+    if (!["start", "turn"].includes(action)) {
+      return res.status(400).json({ message: "Choose start or turn for the avatar interview" })
+    }
+    if (!mongoose.isValidObjectId(resumeId)) {
+      return res.status(400).json({ message: "Choose a valid saved CV to start the interview" })
+    }
+    if (!targetRole) {
+      return res.status(400).json({ message: "Add the role you want to interview for" })
+    }
+    if (action === "turn" && !message) {
+      return res.status(400).json({ message: "Add your answer to continue the interview" })
+    }
+    if (message.length > 1800) {
+      return res.status(400).json({ message: "Answers must be 1,800 characters or fewer" })
+    }
+
+    const resumeModel = require("../models/resume.model")
+    const resume = await resumeModel.findOne({ _id: resumeId, user: req.user.id }).select("fileName extractedText")
+    if (!resume) {
+      return res.status(404).json({ message: "That CV wasn't found in your saved resumes" })
+    }
+    if (!resume.extractedText?.trim()) {
+      return res.status(422).json({ message: "We couldn't read text from this CV. Try another text-based PDF." })
+    }
+
+    if (streamTurn) {
+      res.status(200)
+      res.set({
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      })
+      res.flushHeaders?.()
+    }
+
+    const { getAvatarInterviewTurn } = require("../services/ai.service")
+    const reply = await getAvatarInterviewTurn({
+      action,
+      resumeText: resume.extractedText,
+      targetRole,
+      language,
+      candidateIntro,
+      history,
+      onChunk: streamTurn
+        ? (text) => {
+            if (!res.destroyed) res.write(`data: ${JSON.stringify({ type: "delta", text })}\n\n`)
+          }
+        : undefined,
+    })
+
+    if (streamTurn) {
+      if (!res.destroyed) {
+        res.write(`data: ${JSON.stringify({ type: "done", reply })}\n\n`)
+        res.end()
+      }
+      return
+    }
+
+    res.status(200).json({ message: "Avatar interview turn ready", reply, resumeName: resume.fileName })
+  } catch (error) {
+    console.error("Avatar interview error:", error)
+    if (res.headersSent) {
+      if (!res.destroyed) {
+        res.write(`data: ${JSON.stringify({ type: "error", message: error.message || "The AI interviewer couldn't continue right now" })}\n\n`)
+        res.end()
+      }
+      return
+    }
+    res.status(500).json({ message: error.message || "The AI interviewer couldn't continue right now" })
   }
 }
 
@@ -530,7 +684,9 @@ module.exports = {
   getInterviewStatsController,
   atsScoreController,
   starCheckController,
+  checkProofClaimController,
   voiceFeedbackController,
+  avatarInterviewController,
   gapAnalysisController,
   nextQuestionController,
   runCodeController,

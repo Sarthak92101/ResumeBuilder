@@ -95,6 +95,14 @@ export const getStarCheck = async ({ questionText, userAnswer }) => {
   return response.data
 }
 
+export const checkProofClaim = async (interviewId, claimId, { answer, evidenceNote, evidenceUrl }) => {
+  const response = await api.post(
+    `/api/interview/report/${interviewId}/proof-claims/${claimId}/check`,
+    { answer, evidenceNote, evidenceUrl }
+  )
+  return response.data
+}
+
 export const getInterviewReportById = async (interviewId) => {
   const response = await api.get(`/api/interview/report/${interviewId}`)
   return response.data
@@ -127,6 +135,81 @@ export const getVoiceFeedback = async ({ questionText, transcript }) => {
     questionText,
     transcript,
   })
+  return response.data
+}
+
+export const sendAvatarInterviewTurn = async ({ action, resumeId, targetRole, language, message, candidateIntro, history, onReplyChunk }) => {
+  const body = {
+    action,
+    resumeId,
+    targetRole,
+    language,
+    message,
+    candidateIntro,
+    history,
+  }
+
+  if (typeof onReplyChunk === 'function' && action === 'turn') {
+    const baseURL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '')
+    const response = await fetch(`${baseURL}/api/interview/avatar-interview`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...body, stream: true }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      const requestError = new Error(errorData.message || 'Mira couldn’t continue the interview. Please try again.')
+      requestError.response = { data: errorData }
+      throw requestError
+    }
+    if (!response.body) throw new Error('This browser could not receive Mira’s live reply.')
+
+    if (response.headers.get('content-type')?.includes('application/json')) {
+      const data = await response.json()
+      if (data.reply) onReplyChunk(data.reply)
+      return data
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    let reply = ''
+
+    const handleFrame = (frame) => {
+      const dataLine = frame.split(/\r?\n/).find((line) => line.startsWith('data:'))
+      if (!dataLine) return
+      const event = JSON.parse(dataLine.slice(5).trim())
+      if (event.type === 'delta' && event.text) {
+        reply += event.text
+        onReplyChunk(event.text)
+      } else if (event.type === 'done') {
+        reply = event.reply || reply
+      } else if (event.type === 'error') {
+        const streamError = new Error(event.message || 'Mira couldn’t continue the interview. Please try again.')
+        streamError.response = { data: { message: streamError.message } }
+        throw streamError
+      }
+    }
+
+    while (true) {
+      const { value, done } = await reader.read()
+      buffer += decoder.decode(value, { stream: !done })
+      let boundary = buffer.indexOf('\n\n')
+      while (boundary !== -1) {
+        handleFrame(buffer.slice(0, boundary))
+        buffer = buffer.slice(boundary + 2)
+        boundary = buffer.indexOf('\n\n')
+      }
+      if (done) break
+    }
+
+    if (buffer.trim()) handleFrame(buffer)
+    return { reply }
+  }
+
+  const response = await api.post('/api/interview/avatar-interview', body)
   return response.data
 }
 

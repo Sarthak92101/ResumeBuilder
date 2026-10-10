@@ -20,9 +20,9 @@ $text-muted: var(--text-muted);
 $text-soft: var(--text-soft);
 
 // ── Brand colors (always the same) ────────────────────────────────────────────
-$accent: #8b5cf6;
-$accent-light: #c4b5fd;
-$accent-secondary: #22d3ee;
+$accent: #6558e8;
+$accent-light: #a896ff;
+$accent-secondary: #2abfa5;
 $accent-gold: #fbbf24;
 
 $success: #34d399;
@@ -33,14 +33,14 @@ $severity-high: #f87171;
 $severity-medium: #fbbf24;
 $severity-low: #34d399;
 
-$info-bg: rgba(34, 211, 238, 0.08);
-$info-border: rgba(34, 211, 238, 0.22);
-$info-text: #67e8f9;
+$info-bg: rgba(42, 191, 165, 0.08);
+$info-border: rgba(42, 191, 165, 0.22);
+$info-text: #2abfa5;
 
 // ── Gradients ─────────────────────────────────────────────────────────────────
-$gradient-brand: linear-gradient(135deg, #8b5cf6 0%, #6366f1 45%, #22d3ee 100%);
-$gradient-hero: linear-gradient(160deg, rgba(139, 92, 246, 0.2) 0%, rgba(34, 211, 238, 0.06) 50%, transparent 100%);
-$gradient-surface: linear-gradient(180deg, rgba(139, 92, 246, 0.1) 0%, transparent 100%);
+$gradient-brand: linear-gradient(135deg, #6558e8 0%, #5345d0 48%, #2abfa5 100%);
+$gradient-hero: linear-gradient(160deg, rgba(101, 88, 232, 0.2) 0%, rgba(42, 191, 165, 0.06) 50%, transparent 100%);
+$gradient-surface: linear-gradient(180deg, rgba(101, 88, 232, 0.1) 0%, transparent 100%);
 
 // ── Typography ────────────────────────────────────────────────────────────────
 $font-stack: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
@@ -54,5 +54,5 @@ $radius-xl: 1.25rem;
 
 // ── Shadows ───────────────────────────────────────────────────────────────────
 $shadow-card: 0 8px 32px rgba(0, 0, 0, 0.45);
-$shadow-glow: 0 0 60px rgba(139, 92, 246, 0.2);
-$shadow-input: 0 0 0 3px rgba(139, 92, 246, 0.22);
+$shadow-glow: 0 0 60px rgba(101, 88, 232, 0.2);
+$shadow-input: 0 0 0 3px rgba(101, 88, 232, 0.22);

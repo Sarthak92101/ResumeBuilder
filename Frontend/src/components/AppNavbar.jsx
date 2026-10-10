@@ -1,104 +1,92 @@
-import { Link, useNavigate, useLocation } from "react-router-dom"
+import { NavLink, Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../features/auth/hooks/useAuth"
-import { useContext } from "react"
+import { useContext, useState } from "react"
 import { ThemeContext } from "../features/theme/ThemeContext"
 import { Button } from './ui'
+
+const NAV_ITEMS = [
+  { path: '/', label: 'Interview Plan', end: true },
+  { path: '/dashboard', label: 'Progress' },
+  { path: '/ats', label: 'ATS Checker' },
+  { path: '/ai-coach', label: 'AI Avatar Interview' },
+  { path: '/resumes', label: 'My Resumes' },
+  { path: '/gap-analysis', label: 'Skill Gaps' },
+  { path: '/about', label: 'About' },
+]
 
 const AppNavbar = () => {
   const { user, handleLogout } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
   const { theme, toggle } = useContext(ThemeContext)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const onLogout = async () => {
     await handleLogout()
     navigate("/login")
   }
 
-  const navItems = [
-    { path: '/', label: 'Interview Plan' },
-    { path: '/dashboard', label: 'Dashboard' },
-    { path: '/ats', label: 'ATS Checker' },
-    { path: '/resumes', label: 'My Resumes' },
-    { path: '/gap-analysis', label: 'Gap Analysis' },
-    { path: '/about', label: 'About Me' },
-  ]
-
-  const isActive = (path) => location.pathname === path
-
   return (
-    <header className="app-navbar" style={{
-      width: 'min(calc(100% - var(--space-6)), 1180px)',
-      margin: '0 auto',
-      padding: 'var(--space-3) var(--space-4)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 'var(--space-3)',
-      background: 'var(--color-surface)',
-      border: '1px solid var(--color-border)',
-      borderRadius: 'var(--radius-lg)',
-      position: 'sticky',
-      top: 'var(--space-3)',
-      zIndex: 20,
-      marginTop: 'var(--space-3)',
-    }}>
-      <Link to="/" style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 'var(--space-2)',
-        textDecoration: 'none',
-        color: 'var(--color-text-primary)',
-        fontWeight: 700,
-      }}>
-        <span style={{
-          width: '28px',
-          height: '28px',
-          display: 'grid',
-          placeItems: 'center',
-          borderRadius: 'var(--radius-sm)',
-          background: 'var(--color-accent)',
-          color: 'var(--color-surface)',
-          fontSize: '0.7rem',
-        }}>SM</span>
-        <span>SkillMirror</span>
+    <header className="app-navbar">
+      <Link to="/" className="app-navbar__brand" onClick={() => setMenuOpen(false)}>
+        <span className="app-navbar__mark" aria-hidden="true">SM</span>
+        <span className="app-navbar__brand-copy">
+          <strong>SkillMirror</strong>
+          <small>Interview prep for developers</small>
+        </span>
       </Link>
 
-      <nav className="app-navbar__nav" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', flex: 1, justifyContent: 'center', overflowX: 'auto' }}>
-        {navItems.map((item) => (
-          <Link
+      <button
+        type="button"
+        className="app-navbar__menu-toggle"
+        aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+        aria-expanded={menuOpen}
+        aria-controls="primary-navigation"
+        onClick={() => setMenuOpen((open) => !open)}
+      >
+        <span />
+        <span />
+        <span />
+      </button>
+
+      <nav
+        id="primary-navigation"
+        className={`app-navbar__nav${menuOpen ? ' app-navbar__nav--open' : ''}`}
+        aria-label="Main navigation"
+      >
+        {NAV_ITEMS.map((item) => (
+          <NavLink
             key={item.path}
             to={item.path}
-            style={{
-              textDecoration: 'none',
-              color: isActive(item.path) ? 'var(--color-accent)' : 'var(--color-text-secondary)',
-              background: isActive(item.path) ? 'var(--color-accent-soft)' : 'transparent',
-              borderRadius: 'var(--radius-md)',
-              padding: 'var(--space-2) var(--space-3)',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              whiteSpace: 'nowrap',
-            }}
+            end={item.end}
+            className={({ isActive }) => `app-navbar__link${isActive ? ' app-navbar__link--active' : ''}`}
+            onClick={() => setMenuOpen(false)}
           >
             {item.label}
-          </Link>
+          </NavLink>
         ))}
       </nav>
 
-      <div className="app-navbar__actions" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-        <Button variant="ghost" size="sm" onClick={toggle} aria-label="Toggle theme" style={{ minWidth: '36px', padding: '0 var(--space-2)' }}>
+      <div className="app-navbar__actions">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={toggle}
+          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+          className="app-navbar__theme-toggle"
+        >
           {theme === 'dark' ? '☀' : '☾'}
         </Button>
 
         {user ? (
           <>
-            <span className="app-navbar__greeting" style={{ fontSize: '0.76rem', color: 'var(--color-text-secondary)' }}>Hi, {user.username}</span>
-            <Button variant="secondary" size="sm" onClick={onLogout}>Logout</Button>
+            <span className="app-navbar__greeting">Hi, {user.username}</span>
+            <Button variant="secondary" size="sm" onClick={onLogout}>Log out</Button>
           </>
         ) : (
           <>
-            <Link to="/login" style={{ textDecoration: 'none' }}><Button variant="secondary" size="sm">Log in</Button></Link>
-            <Link to="/register" style={{ textDecoration: 'none' }}><Button variant="primary" size="sm">Sign up</Button></Link>
+            <Link to="/login" className="app-navbar__auth-link">Log in</Link>
+            <Link to="/register" className="app-navbar__auth-link app-navbar__auth-link--primary">Sign up</Link>
           </>
         )}
       </div>

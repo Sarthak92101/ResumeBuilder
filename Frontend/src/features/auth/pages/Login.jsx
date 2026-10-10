@@ -22,14 +22,6 @@ const Login = () => {
     }
   }
 
-  if (loading) {
-    return (
-      <main className="loading-screen">
-        <h1>Loading…</h1>
-      </main>
-    )
-  }
-
   return (
     <AuthLayout title="Welcome back" subtitle="Sign in to your account">
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
@@ -38,7 +30,9 @@ const Login = () => {
         <Input label="Email" type="email" name="email" id="email" placeholder="you@example.com" required autoComplete="email" onChange={(e) => setEmail(e.target.value)} />
         <Input label="Password" type="password" name="password" id="password" placeholder="Enter your password" required autoComplete="current-password" onChange={(e) => setPassword(e.target.value)} />
 
-        <Button type="submit" variant="primary" size="lg" style={{ width: '100%' }}>Sign in</Button>
+        <Button type="submit" variant="primary" size="lg" disabled={loading} style={{ width: '100%' }}>
+          {loading ? 'Connecting to your workspace…' : 'Sign in'}
+        </Button>
       </form>
 
       <p style={{ marginTop: 'var(--space-5)', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>

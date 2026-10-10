@@ -3,15 +3,14 @@ import AppNavbar from '../../../components/AppNavbar'
 import { listResumes } from '../../resume/services/resume.api'
 import { getGapAnalysis } from '../services/interview.api'
 import { Card, PageHeader, Button, Select, Textarea, Badge } from '../../../components/ui'
-
-const STATUS_COLORS = {
-  'Have': { bg: 'rgba(52, 211, 153, 0.12)', color: '#34d399', border: 'rgba(52, 211, 153, 0.25)' },
-  'Add to resume': { bg: 'rgba(251, 191, 36, 0.12)', color: '#fbbf24', border: 'rgba(251, 191, 36, 0.25)' },
-  'Learn': { bg: 'rgba(248, 113, 113, 0.12)', color: '#f87171', border: 'rgba(248, 113, 113, 0.25)' },
-}
+import { Link } from 'react-router-dom'
+import '../../resume/pages/resume.scss'
 
 const GapAnalysis = () => {
   const [resumes, setResumes] = useState([])
+  const [resumesLoading, setResumesLoading] = useState(true)
+  const [resumeListError, setResumeListError] = useState('')
+  const [resumeRetry, setResumeRetry] = useState(0)
   const [selectedResumeId, setSelectedResumeId] = useState('')
   const [jobDescription, setJobDescription] = useState('')
   const [loading, setLoading] = useState(false)
@@ -19,16 +18,23 @@ const GapAnalysis = () => {
   const [error, setError] = useState('')
 
   useEffect(() => {
+    let cancelled = false
     async function load() {
+      setResumesLoading(true)
+      setResumeListError('')
       try {
         const res = await listResumes()
+        if (cancelled) return
         setResumes(res.resumes || [])
-      } catch (e) {
-        console.error(e)
+      } catch (error) {
+        if (!cancelled) setResumeListError(error?.response?.data?.message || 'We couldn’t load your saved resumes.')
+      } finally {
+        if (!cancelled) setResumesLoading(false)
       }
     }
     load()
-  }, [])
+    return () => { cancelled = true }
+  }, [resumeRetry])
 
   const onSubmit = async (e) => {
     e.preventDefault()
@@ -52,11 +58,24 @@ const GapAnalysis = () => {
   return (
     <div className='page-shell'>
       <AppNavbar />
-      <main className='container'>
-        <PageHeader title='Resume-to-JD Gap Analysis' subtitle='Discover which skills you already have, which to add to your resume, and which to learn.' />
+      <main className='container resume-tool-page' aria-busy={loading || resumesLoading}>
+        <PageHeader
+          title='Resume-to-JD Gap Analysis'
+          subtitle='See which skills are already supported by your resume, which may need clearer evidence, and which may need practice.'
+          action={<Link to='/resumes' className='resume-tool-link'>Manage resumes <span aria-hidden='true'>→</span></Link>}
+        />
 
-        <Card style={{ padding: 'var(--space-5)' }}>
-          <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+        <Card className='resume-tool-card'>
+          <form onSubmit={onSubmit} className='resume-tool-form'>
+            {resumesLoading && <div className='resume-list-status' role='status'><span className='resume-tool-spinner' aria-hidden='true' /> Loading saved resumes…</div>}
+            {resumeListError && <div className='resume-tool-error' role='alert'><span>{resumeListError}</span><Button type='button' variant='secondary' size='sm' onClick={() => setResumeRetry((key) => key + 1)}>Try again</Button></div>}
+            {resumes.length === 0 && !resumesLoading && !resumeListError && (
+              <div className='resume-tool-empty-hint'>
+                <strong>Upload a resume to start</strong>
+                <span>Your saved PDFs are used to compare your experience with the job description.</span>
+                <Link to='/resumes'>Go to My Resumes <span aria-hidden='true'>→</span></Link>
+              </div>
+            )}
             <Select label='Select Resume (upload first in My Resumes)' value={selectedResumeId} onChange={(e) => setSelectedResumeId(e.target.value)}>
               <option value=''>-- choose --</option>
               {resumes.map(r => (
@@ -66,45 +85,46 @@ const GapAnalysis = () => {
 
             <Textarea label='Job Description' value={jobDescription} onChange={(e) => setJobDescription(e.target.value)} rows={10} placeholder='Paste the full job description here...' />
 
-            <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-              <Button type='submit' variant='primary' disabled={loading}>{loading ? 'Analyzing...' : 'Run Gap Analysis'}</Button>
-              <Button type='button' variant='secondary' onClick={() => { setResult(null); setJobDescription(''); setSelectedResumeId(''); setError(''); }}>Reset</Button>
+            <div className='resume-tool-actions'>
+              <Button type='submit' variant='primary' disabled={loading || resumesLoading}>{loading ? 'Analyzing…' : 'Analyze skill gaps'}{loading && <span className='resume-tool-spinner' aria-hidden='true' />}</Button>
+              <Button type='button' variant='secondary' disabled={loading} onClick={() => { setResult(null); setJobDescription(''); setSelectedResumeId(''); setError(''); }}>Reset</Button>
             </div>
-            {error && <div style={{ padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', background: 'rgba(229,72,77,0.08)', color: 'var(--color-danger)', border: '1px solid rgba(229,72,77,0.2)' }}>{error}</div>}
+            {error && <div className='resume-tool-error' role='alert'><strong>We couldn’t analyze these skills.</strong><span>{error}</span></div>}
           </form>
         </Card>
 
         {result && (
-          <Card style={{ marginTop: 'var(--space-5)', padding: 'var(--space-5)' }}>
-            <h2 style={{ marginTop: 0 }}>Analysis Results</h2>
+          <Card className='resume-tool-card gap-results-card'>
+            <div className='gap-results-heading'><div><span>YOUR ROLE MATCH</span><h2>Analysis results</h2></div><span>{(result.gaps || []).length} skills reviewed</span></div>
             <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', marginBottom: 'var(--space-4)' }}>
               <Badge tone='success'>{(result.gaps || []).filter(g => g.status === 'Have').length} Already Have</Badge>
               <Badge tone='warning'>{(result.gaps || []).filter(g => g.status === 'Add to resume').length} Add to Resume</Badge>
               <Badge tone='danger'>{(result.gaps || []).filter(g => g.status === 'Learn').length} Need to Learn</Badge>
             </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div className='gap-table-wrap' role='region' aria-label='Skill gap results' tabIndex='0'>
+            <table className='gap-results-table'>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 'var(--space-2) 0', color: 'var(--color-text-secondary)' }}>Skill</th>
-                  <th style={{ textAlign: 'left', padding: 'var(--space-2) 0', color: 'var(--color-text-secondary)' }}>Status</th>
-                  <th style={{ textAlign: 'left', padding: 'var(--space-2) 0', color: 'var(--color-text-secondary)' }}>Suggestion</th>
+                  <th>Skill</th>
+                  <th>Status</th>
+                  <th>Suggestion</th>
                 </tr>
               </thead>
               <tbody>
                 {(result.gaps || []).map((item, i) => {
-                  const colors = STATUS_COLORS[item.status] || STATUS_COLORS['Learn']
                   return (
                     <tr key={i}>
-                      <td style={{ borderTop: '1px solid var(--color-border)', padding: 'var(--space-3) 0', color: 'var(--color-text-primary)' }}>{item.skill}</td>
-                      <td style={{ borderTop: '1px solid var(--color-border)', padding: 'var(--space-3) 0' }}>
+                      <td>{item.skill}</td>
+                      <td>
                         <Badge tone={item.status === 'Have' ? 'success' : item.status === 'Add to resume' ? 'warning' : 'danger'}>{item.status}</Badge>
                       </td>
-                      <td style={{ borderTop: '1px solid var(--color-border)', padding: 'var(--space-3) 0', color: 'var(--color-text-secondary)' }}>{item.suggestion}</td>
+                      <td>{item.suggestion}</td>
                     </tr>
                   )
                 })}
               </tbody>
             </table>
+            </div>
           </Card>
         )}
       </main>

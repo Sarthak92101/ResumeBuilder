@@ -1,5 +1,6 @@
 const puppeteer = require("puppeteer")
-const { buildProfessionalResumeHtml, WATERMARK } = require("./resumeTemplate")
+const { buildProfessionalResumeLatex, WATERMARK } = require("./resumeTemplate")
+const { compileLatexToPdf } = require("./latexCompile.service")
 
 const WATERMARK_TEXT = WATERMARK
 const BRAND_PRIMARY = "#7c3aed"
@@ -283,7 +284,7 @@ async function htmlToPdf(html) {
 }
 
 async function generateResumePdf(report) {
-  return htmlToPdf(buildProfessionalResumeHtml(report))
+  return compileLatexToPdf(buildProfessionalResumeLatex(report))
 }
 
 async function generateInterviewPlanPdf(report) {

@@ -1,92 +1,116 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import AppNavbar from '../../../components/AppNavbar'
+import { Button, Card, EmptyState, PageHeader } from '../../../components/ui'
 import { listResumes, uploadResume } from '../services/resume.api'
-import { generateInterviewReport } from '../../interview/services/interview.api'
-import { Card, PageHeader, Button, EmptyState } from '../../../components/ui'
+import './resume.scss'
 
 const MyResumes = () => {
   const [resumes, setResumes] = useState([])
-  const [file, setFile] = useState(null)
+  const [pageLoading, setPageLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
+  const [listError, setListError] = useState('')
+  const [uploadError, setUploadError] = useState('')
+  const [uploadSuccess, setUploadSuccess] = useState('')
+  const fileInputRef = useRef(null)
+  const navigate = useNavigate()
 
-  useEffect(() => {
-    load()
+  const loadResumes = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setPageLoading(true)
+    setListError('')
+    try {
+      const response = await listResumes()
+      setResumes(response.resumes || [])
+    } catch (error) {
+      setListError(error?.response?.data?.message || 'We couldn’t load your resumes. Please try again.')
+    } finally {
+      if (!silent) setPageLoading(false)
+    }
   }, [])
 
-  async function load() {
+  useEffect(() => { loadResumes() }, [loadResumes])
+
+  const onUpload = async (event) => {
+    const input = event.target
+    const file = input.files?.[0]
+    if (!file) return
+    setUploadError('')
+    setUploadSuccess('')
+
+    if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
+      setUploadError('Please choose a PDF file.')
+      input.value = ''
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('This file is over the 5 MB limit. Choose a smaller PDF.')
+      input.value = ''
+      return
+    }
+
+    setUploading(true)
     try {
-      const res = await listResumes()
-      setResumes(res.resumes || [])
-    } catch (e) {
-      console.error(e)
+      await uploadResume(file)
+      await loadResumes({ silent: true })
+      setUploadSuccess(`${file.name} is ready to use in an interview plan.`)
+    } catch (error) {
+      setUploadError(error?.response?.data?.message || 'Upload failed. Please try again.')
+    } finally {
+      setUploading(false)
+      input.value = ''
     }
   }
 
-  async function onUpload(e) {
-    const f = e.target.files[0]
-    if (!f) return
-    setFile(f)
-    try {
-      await uploadResume(f)
-      setFile(null)
-      load()
-    } catch (err) {
-      alert('Upload failed')
-    }
-  }
-
-  async function generateFrom(resumeId) {
-    try {
-      const payload = { jobDescription: 'Use this resume to generate interview', resumeId }
-      await generateInterviewReport(payload)
-      alert('Interview generation started')
-    } catch (e) {
-      const message = e?.response?.data?.message || e?.message || 'Failed to generate interview'
-      alert(message)
-    }
+  const selectResume = (resume) => {
+    navigate('/', { state: { resumeId: resume._id, fileName: resume.fileName } })
   }
 
   return (
     <div className="page-shell">
       <AppNavbar />
-      <main className="container">
+      <main className="container resume-tool-page resumes-page" aria-busy={pageLoading || uploading}>
         <PageHeader
           title="My Resumes"
-          subtitle="Upload your latest resume files and generate interview plans tailored to your experience."
-          action={
-            <label style={{ display: 'inline-flex', cursor: 'pointer' }}>
-              <input type="file" accept="application/pdf" onChange={onUpload} style={{ display: 'none' }} />
-              <Button variant="primary" size="md">Upload PDF</Button>
+          subtitle="Save your PDF resumes here, then select one when you build a role-specific interview plan."
+          action={(
+            <label className="resume-upload-button">
+              <input ref={fileInputRef} type="file" accept="application/pdf,.pdf" onChange={onUpload} disabled={uploading} />
+              <Button variant="primary" disabled={uploading}>{uploading ? 'Uploading…' : 'Upload PDF'}{uploading && <span className="resume-tool-spinner" aria-hidden="true" />}</Button>
             </label>
-          }
+          )}
         />
 
-        {file && <div style={{ marginBottom: 'var(--space-4)', color: 'var(--color-text-secondary)' }}>Selected: {file.name}</div>}
+        {uploadError && <div className="resume-tool-error resumes-message" role="alert"><strong>Resume wasn’t uploaded.</strong><span>{uploadError}</span></div>}
+        {uploadSuccess && <div className="resumes-success" role="status">{uploadSuccess}</div>}
+        {listError && <div className="resume-tool-error resumes-message" role="alert"><strong>We couldn’t load your resumes.</strong><span>{listError}</span><Button variant="secondary" size="sm" onClick={() => loadResumes()}>Try again</Button></div>}
 
-        {resumes.length === 0 ? (
+        {pageLoading ? (
+          <div className="resumes-loading" role="status">
+            <span className="resume-tool-spinner" aria-hidden="true" />
+            <span className="resumes-loading__copy"><strong>Finding your saved resumes</strong><small>Getting your PDFs ready to use in an interview plan.</small></span>
+          </div>
+        ) : resumes.length === 0 && !listError ? (
           <EmptyState
-            title="No resumes yet"
-            description="Upload a PDF to start generating interview plans for your target roles."
-            icon={<span>PDF</span>}
-            actionLabel="Choose resume"
-            onAction={() => document.querySelector('input[type="file"]').click()}
+            title="No resumes saved yet"
+            description="Upload a PDF to compare your experience with a job description and create a more personal interview plan."
+            icon={<span aria-hidden="true">PDF</span>}
+            actionLabel="Choose a resume"
+            onAction={() => fileInputRef.current?.click()}
           />
-        ) : (
-          <div style={{ display: 'grid', gap: 'var(--space-3)' }}>
-            {resumes.map(r => (
-              <Card key={r._id} interactive style={{ padding: 'var(--space-4)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
-                  <div>
-                    <div style={{ fontWeight: 700 }}>{r.fileName}</div>
-                    <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', marginTop: 'var(--space-1)' }}>
-                      {new Date(r.createdAt).toLocaleString()}
-                    </div>
-                  </div>
-                  <Button variant="primary" onClick={() => generateFrom(r._id)}>Create interview plan</Button>
-                </div>
+        ) : resumes.length > 0 ? (
+          <section className="resume-list" aria-label="Saved resumes">
+            <div className="resume-list__heading"><strong>{resumes.length} {resumes.length === 1 ? 'resume' : 'resumes'} saved</strong><span>PDF files · up to 5 MB each</span></div>
+            {resumes.map((resume) => (
+              <Card key={resume._id} className="saved-resume-card">
+                <span className="saved-resume-card__icon" aria-hidden="true">PDF</span>
+                <div className="saved-resume-card__copy"><strong>{resume.fileName}</strong><span>Uploaded {new Date(resume.createdAt).toLocaleDateString()}</span></div>
+                <Button variant="secondary" onClick={() => selectResume(resume)}>Use for interview plan <span aria-hidden="true">→</span></Button>
               </Card>
             ))}
-          </div>
-        )}
+          </section>
+        ) : null}
+
+        <div className="resumes-footer-tip"><span aria-hidden="true">i</span><p>Your resume is used to personalize analysis and interview questions. A job description makes the results more specific.</p><Link to="/">Create a plan <span aria-hidden="true">→</span></Link></div>
       </main>
     </div>
   )
