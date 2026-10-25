@@ -3,6 +3,7 @@ import { useAuth } from "../features/auth/hooks/useAuth"
 import { useContext, useState } from "react"
 import { ThemeContext } from "../features/theme/ThemeContext"
 import { Button } from './ui'
+import SkillMirrorMark from './SkillMirrorMark'
 
 const NAV_ITEMS = [
   { path: '/', label: 'Prepare', end: true },
@@ -27,7 +28,7 @@ const AppNavbar = () => {
   return (
     <header className="app-navbar">
       <Link to="/" className="app-navbar__brand" onClick={() => setMenuOpen(false)}>
-        <span className="app-navbar__mark" aria-hidden="true">SM</span>
+        <SkillMirrorMark className="app-navbar__mark" />
         <span className="app-navbar__brand-copy">
           <strong>SkillMirror</strong>
           <small>Interview prep for developers</small>

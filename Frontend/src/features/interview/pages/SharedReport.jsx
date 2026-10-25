@@ -3,6 +3,7 @@ import { useParams } from 'react-router'
 import { getSharedReport, addMentorComment } from '../services/interview.api'
 import { Button } from '../../../components/ui'
 import LoadingExperience from '../../../components/ui/LoadingExperience.jsx'
+import SkillMirrorMark from '../../../components/SkillMirrorMark'
 import '../style/shared.scss'
 
 const SharedReport = () => {
@@ -59,7 +60,7 @@ const SharedReport = () => {
       <main className='loading-experience loading-experience--error' role='alert'>
         <section className='loading-experience__card'>
           <div className='loading-experience__brand'>
-            <span className='loading-experience__mark' aria-hidden='true'>SM</span>
+            <SkillMirrorMark className='loading-experience__mark' />
             <span>SkillMirror</span>
           </div>
           <div className='loading-experience__copy'>
