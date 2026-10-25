@@ -5,13 +5,12 @@ import { ThemeContext } from "../features/theme/ThemeContext"
 import { Button } from './ui'
 
 const NAV_ITEMS = [
-  { path: '/', label: 'Interview Plan', end: true },
+  { path: '/', label: 'Prepare', end: true },
   { path: '/dashboard', label: 'Progress' },
-  { path: '/ats', label: 'ATS Checker' },
-  { path: '/ai-coach', label: 'AI Avatar Interview' },
-  { path: '/resumes', label: 'My Resumes' },
-  { path: '/gap-analysis', label: 'Skill Gaps' },
-  { path: '/about', label: 'About' },
+  { path: '/ats', label: 'ATS' },
+  { path: '/ai-coach', label: 'Mira' },
+  { path: '/resumes', label: 'Resumes' },
+  { path: '/gap-analysis', label: 'Skills' },
 ]
 
 const AppNavbar = () => {

@@ -213,6 +213,15 @@ export const sendAvatarInterviewTurn = async ({ action, resumeId, targetRole, la
   return response.data
 }
 
+export const getAvatarResumeInsights = async ({ resumeId, targetRole, conversation }) => {
+  const response = await api.post('/api/interview/avatar-interview/resume-insights', {
+    resumeId,
+    targetRole,
+    conversation,
+  })
+  return response.data
+}
+
 // ── Feature 2: Gap Analysis ───────────────────────────────────────────────────
 export const getGapAnalysis = async ({ resumeId, resumeText, jobDescription }) => {
   const response = await api.post('/api/interview/gap-analysis', {

@@ -11,9 +11,12 @@ async function createAtsScoreController(req, res) {
     if (!resume) return res.status(404).json({ message: 'Resume not found' })
     if (String(resume.user) !== String(req.user.id)) return res.status(403).json({ message: 'Forbidden' })
 
-    const resumeText = resume.extractedText
-    if (!resumeText) return res.status(400).json({ message: 'No extracted text available for this resume' })
-
+    const baseResumeText = resume.extractedText
+    if (!baseResumeText) return res.status(400).json({ message: 'No extracted text available for this resume' })
+    const confirmedAdditions = (resume.confirmedInterviewAchievements || []).map((item) => String(item.text || '').trim()).filter(Boolean)
+    const resumeText = confirmedAdditions.length
+      ? `${baseResumeText}\n\nCandidate-confirmed interview additions (self-reported; not part of uploaded PDF):\n${confirmedAdditions.map((item) => `- ${item}`).join('\n')}`
+      : baseResumeText
     const jobDesc = jobDescription && String(jobDescription).trim().length ? jobDescription : 'General resume assessment: no job description provided.'
 
     let aiResult

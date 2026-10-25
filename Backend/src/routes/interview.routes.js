@@ -84,6 +84,12 @@ interviewRouter.post(
   interviewController.avatarInterviewController
 )
 
+interviewRouter.post(
+  "/avatar-interview/resume-insights",
+  authMiddleware.authUser,
+  interviewController.avatarResumeInsightsController
+)
+
 // ── Feature 2: Gap Analysis ───────────────────────────────────────────────────
 interviewRouter.post(
   "/gap-analysis",

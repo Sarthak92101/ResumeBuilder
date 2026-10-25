@@ -86,6 +86,31 @@
 .ai-coach-voice-console__copy strong { color: var(--color-text-primary); font-size: 0.75rem; }
 .ai-coach-voice-console__copy p { overflow: hidden; margin: 0; color: var(--color-text-secondary); font-size: 0.68rem; line-height: 1.5; text-overflow: ellipsis; }
 .ai-coach-voice-console__copy p[role='alert'] { color: var(--color-danger); }
+.ai-coach-resume-review { display: grid; gap: 0.8rem; padding: 1rem 1.25rem 1.15rem; border-top: 1px solid var(--color-border); background: var(--color-surface); }
+.ai-coach-wrapup-loading { display: flex; align-items: center; gap: 0.7rem; min-height: 64px; color: var(--color-text-secondary); }
+.ai-coach-wrapup-loading > div { display: grid; gap: 0.2rem; }
+.ai-coach-wrapup-loading strong { color: var(--color-text-primary); font-size: 0.77rem; }
+.ai-coach-wrapup-loading p { margin: 0; color: var(--color-text-muted); font-size: 0.69rem; line-height: 1.5; }
+.ai-coach-resume-review__heading { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.ai-coach-resume-review__heading > div > span { color: var(--color-accent); font-size: 0.57rem; font-weight: 800; letter-spacing: 0.1em; }
+.ai-coach-resume-review__heading h3 { margin: 0.2rem 0 0; color: var(--color-text-primary); font-size: 0.9rem; }
+.ai-coach-resume-review__heading > span { flex: 0 0 auto; padding: 0.3rem 0.5rem; border-radius: 999px; background: var(--color-accent-soft); color: var(--color-accent); font-size: 0.65rem; font-weight: 750; }
+.ai-coach-resume-review__note { margin: 0; color: var(--color-text-muted); font-size: 0.68rem; line-height: 1.55; }
+.ai-coach-resume-suggestions { display: grid; gap: 0.6rem; max-height: 340px; overflow: auto; padding-right: 0.15rem; }
+.ai-coach-resume-suggestion { display: grid; gap: 0.55rem; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: 11px; background: var(--color-input); }
+.ai-coach-resume-suggestion__confirm { display: inline-flex; align-items: center; gap: 0.45rem; color: var(--color-text-primary); font-size: 0.7rem; font-weight: 700; cursor: pointer; }
+.ai-coach-resume-suggestion__confirm input { width: 15px; height: 15px; accent-color: var(--color-accent); }
+.ai-coach-resume-suggestion .ui-field { gap: 0.35rem !important; }
+.ai-coach-resume-suggestion .ui-field > label { font-size: 0.65rem !important; }
+.ai-coach-resume-suggestion .ui-control { min-height: 68px !important; padding: 0.6rem !important; font-size: 0.72rem !important; }
+.ai-coach-resume-suggestion details { color: var(--color-text-muted); font-size: 0.65rem; }
+.ai-coach-resume-suggestion summary { width: fit-content; cursor: pointer; font-weight: 700; }
+.ai-coach-resume-suggestion details p { margin: 0.4rem 0 0; color: var(--color-text-secondary); font-size: 0.67rem; line-height: 1.5; }
+.ai-coach-resume-review__actions { display: flex; flex-wrap: wrap; gap: 0.55rem; }
+.ai-coach-resume-review__empty { display: grid; justify-items: start; gap: 0.5rem; padding: 0.7rem 0; }
+.ai-coach-resume-review__empty strong { color: var(--color-text-primary); font-size: 0.8rem; }
+.ai-coach-resume-review__empty p { margin: 0; color: var(--color-text-secondary); font-size: 0.7rem; line-height: 1.5; }
+.ai-coach-save-success { margin: 0; padding: 0.6rem 0.7rem; border: 1px solid color-mix(in srgb, var(--color-success) 28%, var(--color-border)); border-radius: 9px; background: color-mix(in srgb, var(--color-success) 8%, var(--color-surface)); color: var(--color-text-primary); font-size: 0.68rem; line-height: 1.45; }
 
 @keyframes ai-coach-spin { to { transform: rotate(360deg); } }
 @keyframes ai-coach-orbit { to { transform: rotate(360deg); } }
@@ -121,7 +146,8 @@
   .ai-coach-chat-card { min-height: 590px; }
   .ai-coach-messages { min-height: 260px; max-height: 52vh; padding: 1rem; }
   .ai-coach-chat-heading,
-  .ai-coach-voice-console { padding-right: 1rem; padding-left: 1rem; }
+  .ai-coach-voice-console,
+  .ai-coach-resume-review { padding-right: 1rem; padding-left: 1rem; }
 }
 
 @media (max-width: 420px) {

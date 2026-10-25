@@ -15,6 +15,7 @@ const uploadResume = (req, res, next) => {
 
 router.post('/', authMiddleware.authUser, uploadResume, resumeController.uploadResumeController)
 router.get('/', authMiddleware.authUser, resumeController.listResumesController)
+router.post('/:resumeId/interview-achievements', authMiddleware.authUser, resumeController.saveInterviewAchievementsController)
 
 /* ATS score endpoints */
 const atsController = require('../controllers/ats.controller')

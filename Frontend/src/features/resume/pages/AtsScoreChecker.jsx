@@ -73,6 +73,7 @@ const AtsScoreChecker = () => {
   const scoreDescription = hasJobDescription
     ? 'This estimate compares your resume with the role description you provided.'
     : 'This estimate looks at general resume structure and content.'
+  const selectedResume = resumes.find((resume) => resume._id === selected)
 
   return (
     <div className="page-shell">
@@ -102,6 +103,9 @@ const AtsScoreChecker = () => {
                   <option key={r._id} value={r._id}>{r.fileName} — {new Date(r.createdAt).toLocaleDateString()}</option>
                 ))}
               </Select>
+              {selectedResume?.confirmedInterviewAchievements?.length > 0 && (
+                <p className="ats-interview-additions-note">This check includes your {selectedResume.confirmedInterviewAchievements.length} approved Mira interview {selectedResume.confirmedInterviewAchievements.length === 1 ? 'addition' : 'additions'}. Your uploaded PDF is unchanged.</p>
+              )}
 
               <Textarea label="Job Description (optional)" value={jobDesc} disabled={loading} onChange={(e) => { setJobDesc(e.target.value); setResult(null) }} rows={8} placeholder="Paste the role description for a more targeted score..." />
 

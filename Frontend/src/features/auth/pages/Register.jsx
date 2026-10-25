@@ -16,18 +16,21 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError("")
-    const success = await handleRegister({ username, email, password })
-    if (success) {
+    const result = await handleRegister({ username, email, password })
+    if (result.success) {
       navigate("/")
     } else {
-      setError("Could not create account. Username or email may already exist.")
+      setError(result.message)
     }
   }
 
   return (
     <AuthLayout title="Create account" subtitle="Get started in seconds">
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-        {error && <div style={{ padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', background: 'rgba(229,72,77,0.08)', color: 'var(--color-danger)', border: '1px solid rgba(229,72,77,0.2)' }}>{error}</div>}
+        {error && <div role="alert" style={{ display: 'grid', gap: 'var(--space-2)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', background: 'rgba(229,72,77,0.08)', color: 'var(--color-danger)', border: '1px solid rgba(229,72,77,0.2)' }}>
+          <span>{error}</span>
+          {/already exists|already registered|account already/i.test(error) && <Link to="/login" style={{ color: 'var(--color-accent)', fontWeight: 700, textDecoration: 'none' }}>Go to sign in →</Link>}
+        </div>}
 
         <Input label="Username" type="text" name="username" id="username" placeholder="Choose a username" required autoComplete="username" onChange={(e) => setUsername(e.target.value)} />
         <Input label="Email" type="email" name="email" id="email" placeholder="you@example.com" required autoComplete="email" onChange={(e) => setEmail(e.target.value)} />

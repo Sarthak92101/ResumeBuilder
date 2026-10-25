@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import AppNavbar from '../../../components/AppNavbar'
-import { Badge, Button, Card, Input, Modal, Textarea } from '../../../components/ui'
+import { Badge, Button, Card, Input, Modal, Select, Textarea } from '../../../components/ui'
+import { listResumes } from '../../resume/services/resume.api'
 import GrammarCheck from '../components/GrammarCheck'
 import { useInterview } from '../hooks/useInterview.js'
 import '../style/home.scss'
@@ -35,6 +36,9 @@ const Home = () => {
     const [selectedFileName, setSelectedFileName] = useState('')
     const [selectedResumeId, setSelectedResumeId] = useState(location.state?.resumeId || '')
     const [selectedSavedResumeName, setSelectedSavedResumeName] = useState(location.state?.fileName || '')
+    const [savedResumes, setSavedResumes] = useState([])
+    const [resumesLoading, setResumesLoading] = useState(true)
+    const [resumeListError, setResumeListError] = useState('')
     const [githubUsername, setGithubUsername] = useState('')
     const [leetcodeUsername, setLeetcodeUsername] = useState('')
     const [codeforcesHandle, setCodeforcesHandle] = useState('')
@@ -47,6 +51,29 @@ const Home = () => {
     const [generationStage, setGenerationStage] = useState(0)
     const resumeInputRef = useRef(null)
     const navigate = useNavigate()
+
+    useEffect(() => {
+        let cancelled = false
+        const loadSavedResumes = async () => {
+            setResumeListError('')
+            try {
+                const response = await listResumes()
+                if (cancelled) return
+                const resumes = response.resumes || []
+                const preferred = resumes.find((resume) => resume._id === location.state?.resumeId)
+                const next = preferred || resumes[0]
+                setSavedResumes(resumes)
+                setSelectedResumeId(next?._id || '')
+                setSelectedSavedResumeName(next?.fileName || '')
+            } catch (loadError) {
+                if (!cancelled) setResumeListError(loadError.response?.data?.message || 'Saved resumes are unavailable right now. You can still upload a PDF.')
+            } finally {
+                if (!cancelled) setResumesLoading(false)
+            }
+        }
+        loadSavedResumes()
+        return () => { cancelled = true }
+    }, [location.state?.resumeId])
 
     useEffect(() => {
         if (!loading) {
@@ -169,7 +196,7 @@ const Home = () => {
                 leetcodeUsername,
                 codeforcesHandle,
             })
-            navigate(`/interview/${report._id}`)
+            navigate(`/interview/${report._id}`, { state: { resumeId: resumeFile ? '' : selectedResumeId, fileName: resumeFile ? '' : selectedSavedResumeName } })
         } catch (err) {
             const message = err.response?.data?.message || err.response?.data?.error || err.message || 'Could not create your interview plan. Please try again.'
             setError(message)
@@ -184,41 +211,10 @@ const Home = () => {
         <div className='home-page'>
             <AppNavbar />
             <main className='container home-container' aria-busy={loading}>
-                <section className='home-hero'>
-                    <div className='home-hero__copy'>
-                        <span className='home-hero__eyebrow'>PERSONALIZED PREP FOR SOFTWARE INTERVIEWS</span>
-                        <h1>Prepare for the interview, not just the application.</h1>
-                        <p>Connect your resume, target role, and coding profile to get relevant questions, a focused prep plan, and practical interview feedback.</p>
-                        <a className='home-hero__cta' href='#plan-builder'>Build my interview plan <span aria-hidden='true'>→</span></a>
-                        <div className='home-hero__steps' aria-label='How SkillMirror works'>
-                            <span><b>01</b> Match your role</span>
-                            <span><b>02</b> Use your experience</span>
-                            <span><b>03</b> Practice answers</span>
-                        </div>
-                    </div>
-                    <aside className='home-hero__visual' aria-label='SkillMirror preparation workflow'>
-                        <div className='home-hero__visual-mark' aria-hidden='true'>SM</div>
-                        <span className='home-hero__visual-label'>YOUR EXPERIENCE, IN CONTEXT</span>
-                        <strong>Turn what you’ve built into interview practice.</strong>
-                        <div className='home-hero__signals'>
-                            <span>Resume</span><span>Job description</span><span>GitHub</span><span>LeetCode</span>
-                        </div>
-                        <div className='home-hero__visual-footer'><span aria-hidden='true' /> Tailored to your target role</div>
-                    </aside>
-                </section>
-
-                <nav className='home-tools' aria-label='Other preparation tools'>
-                    <div className='home-tools__intro'><strong>More ways to prepare</strong><span>Pick a tool whenever you need it.</span></div>
-                    <Link to='/ai-coach'>Start AI Avatar Interview <span aria-hidden='true'>↗</span></Link>
-                    <Link to='/ats'>Check ATS fit <span aria-hidden='true'>↗</span></Link>
-                    <Link to='/resumes'>Manage resumes <span aria-hidden='true'>↗</span></Link>
-                    <Link to='/gap-analysis'>Explore skill gaps <span aria-hidden='true'>↗</span></Link>
-                </nav>
-
-                <header className='home-builder-header'>
-                    <span>START HERE</span>
-                    <h2>Build your interview plan</h2>
-                    <p>Add the role and experience you want to discuss. Optional coding profiles help personalize technical questions.</p>
+                <header className='home-workspace-heading'>
+                    <span>YOUR INTERVIEW WORKSPACE</span>
+                    <h1>Prepare for your next interview</h1>
+                    <p>Add a job description and choose a CV. SkillMirror will build a focused practice plan around your experience.</p>
                 </header>
 
                 <Card className='plan-builder' id='plan-builder'>
@@ -249,34 +245,30 @@ const Home = () => {
                                 </div>
 
                                 <div className='resume-upload-block'>
-                                    <div className='resume-upload-block__heading'><strong>Resume PDF</strong><span>Optional if you add a short introduction · Up to 5 MB</span></div>
-                                    {selectedSavedResumeName && (
-                                        <div className='saved-resume-selection'>
-                                            <span className='saved-resume-selection__check' aria-hidden='true'>✓</span>
-                                            <span><small>Saved resume selected</small><strong>{selectedSavedResumeName}</strong></span>
-                                            <button type='button' onClick={() => { setSelectedResumeId(''); setSelectedSavedResumeName('') }}>Remove</button>
-                                        </div>
-                                    )}
+                                    <div className='resume-upload-block__heading'><strong>Your CV</strong><span>Select a saved CV or upload a new PDF · Up to 5 MB</span></div>
+                                    <Select
+                                        label='Saved CV'
+                                        value={selectedResumeId}
+                                        disabled={resumesLoading || savedResumes.length === 0}
+                                        onChange={(event) => {
+                                            const resumeId = event.target.value
+                                            const selectedResume = savedResumes.find((resume) => resume._id === resumeId)
+                                            setSelectedResumeId(resumeId)
+                                            setSelectedSavedResumeName(selectedResume?.fileName || '')
+                                            setSelectedFileName('')
+                                            if (resumeInputRef.current) resumeInputRef.current.value = ''
+                                        }}
+                                        helperText={resumesLoading ? 'Loading your saved CVs…' : resumeListError || (savedResumes.length ? 'Your most recently uploaded CV is selected by default.' : 'No saved CVs yet. Upload a PDF below.')}
+                                    >
+                                        <option value=''>{savedResumes.length ? 'Choose a saved CV' : 'No saved CVs'}</option>
+                                        {savedResumes.map((resume) => <option key={resume._id} value={resume._id}>{resume.fileName}</option>)}
+                                    </Select>
                                     <label htmlFor='resume' className={`resume-drop${selectedFileName ? ' resume-drop--selected' : ''}`}>
                                         <input ref={resumeInputRef} type='file' id='resume' name='resume' accept='.pdf,application/pdf' onChange={handleFileSelect} />
                                         <span className='resume-drop__icon' aria-hidden='true'>{selectedFileName ? '✓' : '↑'}</span>
-                                        <span><strong>{selectedFileName || (selectedSavedResumeName ? 'Choose a different resume' : 'Choose a PDF resume')}</strong><small>{selectedFileName ? 'Click to choose a different file' : 'Browse files · PDF only · 5 MB max'}</small></span>
+                                        <span><strong>{selectedFileName || (selectedSavedResumeName ? `Selected: ${selectedSavedResumeName} · choose another` : 'Upload a new PDF')}</strong><small>{selectedFileName ? 'Click to choose a different file' : 'Browse files · PDF only · 5 MB max'}</small></span>
                                     </label>
                                 </div>
-
-                                <div className='plan-builder__field-grid'>
-                                    <Input label='Target company (optional)' value={targetCompany} onChange={(event) => setTargetCompany(event.target.value)} placeholder='e.g. Google, TCS' />
-                                    <Input label='Interview date (optional)' type='date' value={interviewDate} onChange={(event) => setInterviewDate(event.target.value)} />
-                                </div>
-
-                                <details className='profile-connectors'>
-                                    <summary><span><strong>Add coding profiles</strong><small>Optional · GitHub, LeetCode, Codeforces</small></span><span className='profile-connectors__chevron' aria-hidden='true'>⌄</span></summary>
-                                    <div className='profile-connectors__fields'>
-                                        <Input label='GitHub username' value={githubUsername} onChange={(event) => setGithubUsername(event.target.value)} placeholder='username' />
-                                        <Input label='LeetCode username' value={leetcodeUsername} onChange={(event) => setLeetcodeUsername(event.target.value)} placeholder='username' />
-                                        <Input label='Codeforces handle' value={codeforcesHandle} onChange={(event) => setCodeforcesHandle(event.target.value)} placeholder='handle' />
-                                    </div>
-                                </details>
 
                                 <div className='plan-builder__language'>
                                     <span className='plan-builder__field-label'>Report language</span>
@@ -289,8 +281,27 @@ const Home = () => {
                                     </div>
                                 </div>
 
-                                <Textarea label='Short introduction (optional)' value={selfDescription} onChange={(event) => setSelfDescription(event.target.value)} placeholder='Add context that may not be clear from your resume...' />
-                                <GrammarCheck text={selfDescription} />
+                                <details className='plan-builder__advanced'>
+                                    <summary><span><strong>Personalize further</strong><small>Optional · company, date, coding profiles, or extra context</small></span><span aria-hidden='true'>⌄</span></summary>
+                                    <div className='plan-builder__advanced-content'>
+                                        <div className='plan-builder__field-grid'>
+                                            <Input label='Target company (optional)' value={targetCompany} onChange={(event) => setTargetCompany(event.target.value)} placeholder='e.g. Google, TCS' />
+                                            <Input label='Interview date (optional)' type='date' value={interviewDate} onChange={(event) => setInterviewDate(event.target.value)} />
+                                        </div>
+
+                                        <details className='profile-connectors'>
+                                            <summary><span><strong>Add coding profiles</strong><small>Optional · GitHub, LeetCode, Codeforces</small></span><span className='profile-connectors__chevron' aria-hidden='true'>⌄</span></summary>
+                                            <div className='profile-connectors__fields'>
+                                                <Input label='GitHub username' value={githubUsername} onChange={(event) => setGithubUsername(event.target.value)} placeholder='username' />
+                                                <Input label='LeetCode username' value={leetcodeUsername} onChange={(event) => setLeetcodeUsername(event.target.value)} placeholder='username' />
+                                                <Input label='Codeforces handle' value={codeforcesHandle} onChange={(event) => setCodeforcesHandle(event.target.value)} placeholder='handle' />
+                                            </div>
+                                        </details>
+
+                                        <Textarea label='Short introduction (optional)' value={selfDescription} onChange={(event) => setSelfDescription(event.target.value)} placeholder='Add context that may not be clear from your resume...' />
+                                        <GrammarCheck text={selfDescription} />
+                                    </div>
+                                </details>
                             </section>
                         </div>
 

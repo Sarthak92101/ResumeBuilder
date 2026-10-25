@@ -1,6 +1,6 @@
-import { useContext,useEffect } from "react";
-import { AuthContext } from "../auth.context";
-import { login, register, logout ,me} from "../services/auth.api";
+import { useContext } from "react";
+import { AuthContext } from "../auth-context";
+import { login, register, logout } from "../services/auth.api";
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -33,14 +33,14 @@ export const useAuth = () => {
 
       setUser(data.user);
 
-      // ✅ ADDED
-      return true;
+      return { success: true };
 
     } catch (err) {
-      console.log(err);
-
-      // ✅ ADDED
-      return false;
+      console.error("Registration failed:", err);
+      return {
+        success: false,
+        message: err.response?.data?.message || err.message || "Could not create your account. Please try again.",
+      };
 
     } finally {
       setLoading(false);
@@ -66,21 +66,5 @@ export const useAuth = () => {
     }
   };
 
-  useEffect(() => {
-  const getAndSetUser = async () => {
-    try {
-      const data = await me();
-      setUser(data.user);
-    } catch (error) {
-      console.log("Not logged in");
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  getAndSetUser();
-}, []);
-  
   return { user, loading, handleLogin, handleRegister, handleLogout };
-}; 
+};

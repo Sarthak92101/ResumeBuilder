@@ -26,3 +26,8 @@ export const getAtsScores = async (resumeId) => {
   const res = await api.get(`/api/resume/ats-score/${resumeId}`)
   return res.data
 }
+
+export const saveInterviewAchievements = async (resumeId, achievements) => {
+  const res = await api.post(`/api/resume/${resumeId}/interview-achievements`, { achievements })
+  return res.data
+}

@@ -36,12 +36,21 @@
 .saved-resume-card__copy strong { overflow: hidden; color: var(--color-text-primary); font-size: 0.8rem; text-overflow: ellipsis; white-space: nowrap; }
 .saved-resume-card__copy span { color: var(--color-text-muted); font-size: 0.68rem; }
 .saved-resume-card .ui-button { gap: 0.5rem; }
+.saved-resume-card--has-additions { flex-wrap: wrap; }
+.saved-resume-additions { display: grid; flex: 1 0 calc(100% - 3.2rem); gap: 0.45rem; min-width: 0; margin-left: 3.2rem; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-input); }
+.saved-resume-additions__heading { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.saved-resume-additions__heading strong { color: var(--color-text-primary); font-size: 0.7rem; }
+.saved-resume-additions .ui-button { width: auto; margin: 0; }
+.saved-resume-additions ul { display: grid; gap: 0.35rem; margin: 0; padding-left: 1.1rem; color: var(--color-text-secondary); font-size: 0.7rem; line-height: 1.5; }
+.saved-resume-additions li::marker { color: var(--color-accent); }
+.saved-resume-additions p { margin: 0; color: var(--color-text-muted); font-size: 0.65rem; line-height: 1.5; }
 .resumes-footer-tip { display: flex; align-items: center; gap: 0.7rem; margin-top: 1.25rem; padding: 0.8rem 0.9rem; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-input); }
 .resumes-footer-tip > span { display: grid; width: 24px; height: 24px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: var(--color-accent-soft); color: var(--color-accent); font-size: 0.7rem; font-weight: 800; }
 .resumes-footer-tip p { flex: 1; margin: 0; color: var(--color-text-muted); font-size: 0.7rem; line-height: 1.5; }
 .resumes-footer-tip a { flex: 0 0 auto; color: var(--color-accent); font-size: 0.7rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
 
 .ats-layout { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr); align-items: start; gap: 0.85rem; }
+.ats-interview-additions-note { margin: -0.45rem 0 0; color: var(--color-text-muted); font-size: 0.67rem; line-height: 1.5; }
 .ats-layout--with-breakdown { grid-template-rows: auto auto; }
 .ats-layout--with-breakdown .ats-form-card { grid-column: 1; grid-row: 1; }
 .ats-layout--with-breakdown .ats-result-card { grid-column: 2; grid-row: 1 / span 2; }
@@ -137,7 +146,8 @@
   .resume-tool-actions > button { flex: 1; }
   .saved-resume-card { align-items: flex-start; flex-wrap: wrap; }
   .saved-resume-card__copy { padding-top: 0.15rem; }
-  .saved-resume-card .ui-button { width: 100%; margin-left: 3rem; }
+  .saved-resume-card > .ui-button { width: 100%; margin-left: 3rem; }
+  .saved-resume-additions { flex-basis: 100%; margin-left: 0; }
   .resumes-footer-tip { align-items: flex-start; flex-wrap: wrap; }
   .resumes-footer-tip p { flex-basis: calc(100% - 40px); }
   .resumes-footer-tip a { margin-left: 2rem; }

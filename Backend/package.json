@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "npx nodemon server.js"
+    "dev": "npx nodemon --legacy-watch --watch server.js --watch src server.js"
   },
   "keywords": [],
   "author": "",

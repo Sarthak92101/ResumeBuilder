@@ -9,6 +9,7 @@ SkillMirror is an interview-preparation and resume toolkit. It creates role-spec
 - **Interview practice:** Review questions and sample answers, check answers with STAR feedback, and use the coding and grammar practice tools.
 - **Voice Mock Interview:** Hear plan questions, answer by voice, and get feedback on your responses.
 - **Mira AI Avatar Interview:** Have a spoken, CV-aware interview with adaptive follow-up questions. Mira supports English, Hindi, and Hinglish.
+- **Interview-to-resume loop:** After Mira, review and edit bullet suggestions grounded in your spoken answers. Save only the details you confirm; they feed later ATS checks, Mira interviews, and LaTeX resume drafts. The original uploaded PDF remains untouched.
 - **Resume tools:** Save PDF resumes, create LaTeX-formatted resume PDFs, and check ATS estimates with keyword gaps and improvement suggestions.
 - **Progress and sharing:** Review preparation progress and share an interview report with a mentor for comments.
 - **Polished interface:** Light and dark themes, responsive layouts, animated interactions, and descriptive loading states.

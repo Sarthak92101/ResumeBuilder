@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useEffect, useId, useState } from 'react'
 import '../style/interview.scss'
 import { useInterview } from '../hooks/useInterview.js'
-import { useParams, Link } from 'react-router'
+import { useParams, Link, useLocation } from 'react-router'
 import AppNavbar from '../../../components/AppNavbar'
 import { Button } from '../../../components/ui'
 import { shareReport, getStarCheck, checkProofClaim as checkProofClaimApi } from '../services/interview.api'
@@ -271,6 +271,7 @@ const Interview = () => {
     const [ activeNav, setActiveNav ] = useState('technical')
     const { report, loading, getResumePdf, lastWarnings } = useInterview()
     const { interviewId } = useParams()
+    const location = useLocation()
     const [ pdfLoading, setPdfLoading ] = useState(false)
     const [shareLoading, setShareLoading] = useState(false)
     const [shareToken, setShareToken] = useState(null)
@@ -343,6 +344,12 @@ const Interview = () => {
                         ))}
                     </div>
                     <div className='interview-nav__downloads'>
+                        <p className='interview-nav__downloads-label'>AI interview</p>
+                        <Link to='/ai-coach' state={location.state} className='voice-mock-btn'>
+                            <Button variant='secondary' size='md' style={{ width: '100%' }}>
+                                Practice with Mira <span aria-hidden='true'>→</span>
+                            </Button>
+                        </Link>
                         <p className='interview-nav__downloads-label'>Practice</p>
                         <Link to={`/voice/${interviewId}`} className='voice-mock-btn'>
                             <Button variant='primary' size='md' style={{ width: '100%' }}>

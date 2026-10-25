@@ -48,7 +48,7 @@ async function generateInterviewReportController(req, res) {
         const resumeModel = require("../models/resume.model")
         const saved = await resumeModel.findOne({ _id: req.body.resumeId, user: req.user.id })
         if (saved?.extractedText) {
-          resumeText = saved.extractedText
+          resumeText = appendConfirmedAchievements(saved.extractedText, saved.confirmedInterviewAchievements)
         }
       } catch (e) {
         console.warn("Could not load resume by id:", e.message)
@@ -414,7 +414,7 @@ async function avatarInterviewController(req, res) {
     }
 
     const resumeModel = require("../models/resume.model")
-    const resume = await resumeModel.findOne({ _id: resumeId, user: req.user.id }).select("fileName extractedText")
+    const resume = await resumeModel.findOne({ _id: resumeId, user: req.user.id }).select("fileName extractedText confirmedInterviewAchievements")
     if (!resume) {
       return res.status(404).json({ message: "That CV wasn't found in your saved resumes" })
     }
@@ -437,6 +437,7 @@ async function avatarInterviewController(req, res) {
     const reply = await getAvatarInterviewTurn({
       action,
       resumeText: resume.extractedText,
+      resumeAchievements: resume.confirmedInterviewAchievements,
       targetRole,
       language,
       candidateIntro,
@@ -468,6 +469,51 @@ async function avatarInterviewController(req, res) {
     }
     res.status(500).json({ message: error.message || "The AI interviewer couldn't continue right now" })
   }
+}
+
+async function avatarResumeInsightsController(req, res) {
+  try {
+    const resumeId = req.body?.resumeId
+    const targetRole = typeof req.body?.targetRole === 'string' ? req.body.targetRole.trim().slice(0, 100) : ''
+    const conversation = Array.isArray(req.body?.conversation)
+      ? req.body.conversation
+        .filter((item) => ['user', 'assistant'].includes(item?.role) && typeof item?.content === 'string')
+        .slice(-30)
+        .map(({ role, content }) => ({ role, content: content.trim().slice(0, role === 'user' ? 1800 : 800) }))
+        .filter((item) => item.content)
+      : []
+
+    if (!mongoose.isValidObjectId(resumeId)) {
+      return res.status(400).json({ message: 'Choose a valid saved CV to review interview answers' })
+    }
+    if (!conversation.some((item) => item.role === 'user')) {
+      return res.status(400).json({ message: 'Mira needs at least one spoken answer to find resume additions' })
+    }
+
+    const resumeModel = require('../models/resume.model')
+    const resume = await resumeModel.findOne({ _id: resumeId, user: req.user.id }).select('extractedText confirmedInterviewAchievements')
+    if (!resume) return res.status(404).json({ message: 'That CV was not found in your saved resumes' })
+
+    const { getInterviewResumeSuggestions } = require('../services/ai.service')
+    const result = await getInterviewResumeSuggestions({
+      resumeText: resume.extractedText || '',
+      conversation,
+      targetRole,
+      existingAchievements: resume.confirmedInterviewAchievements,
+    })
+    res.status(200).json({ message: 'Resume additions drafted', suggestions: result.suggestions })
+  } catch (error) {
+    console.error('Avatar interview resume insights error:', error)
+    res.status(502).json({ message: error.message || 'Mira could not prepare resume additions right now' })
+  }
+}
+
+function appendConfirmedAchievements(resumeText, achievements = []) {
+  const additions = (achievements || [])
+    .map((item) => String(item.text || '').trim())
+    .filter(Boolean)
+  if (!additions.length) return resumeText
+  return `${resumeText}\n\nInterview Additions:\n${additions.map((item) => `- ${item}`).join('\n')}`
 }
 
 // ── Feature 2: Gap Analysis ───────────────────────────────────────────────────
@@ -687,6 +733,7 @@ module.exports = {
   checkProofClaimController,
   voiceFeedbackController,
   avatarInterviewController,
+  avatarResumeInsightsController,
   gapAnalysisController,
   nextQuestionController,
   runCodeController,

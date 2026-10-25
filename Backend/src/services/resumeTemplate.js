@@ -65,7 +65,7 @@ function isSectionHeading(line) {
 
   if (/^(#{1,3}\s*)?[A-Z][A-Z\s/&-]+:?\s*$/.test(t)) return true
 
-  return /^(summary|professional summary|career summary|objective|profile|experience|professional experience|work experience|work history|employment|education|skills|technical skills|technical expertise|projects|selected projects|achievements|certifications|contact|strengths|hobbies|internship|leadership|awards|languages|volunteer(?:ing)?|publications|references|extracurricular)/i.test(
+  return /^(summary|professional summary|career summary|objective|profile|experience|professional experience|work experience|work history|employment|education|skills|technical skills|technical expertise|projects|selected projects|achievements|interview additions|certifications|contact|strengths|hobbies|internship|leadership|awards|languages|volunteer(?:ing)?|publications|references|extracurricular)/i.test(
     t.replace(/:$/, "")
   )
 }
