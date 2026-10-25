@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import AppNavbar from '../../../components/AppNavbar'
 import { Button, Card, EmptyState, PageHeader } from '../../../components/ui'
 import { listResumes, uploadResume } from '../services/resume.api'
+import { getActiveResumeId, setActiveResumeId } from '../services/activeResume'
 import './resume.scss'
 
 const MyResumes = () => {
@@ -13,8 +14,8 @@ const MyResumes = () => {
   const [uploadError, setUploadError] = useState('')
   const [uploadSuccess, setUploadSuccess] = useState('')
   const [copiedResumeId, setCopiedResumeId] = useState('')
+  const [activeResumeId, setActiveResumeState] = useState(getActiveResumeId)
   const fileInputRef = useRef(null)
-  const navigate = useNavigate()
 
   const loadResumes = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setPageLoading(true)
@@ -43,6 +44,7 @@ const MyResumes = () => {
       input.value = ''
       return
     }
+
     if (file.size > 5 * 1024 * 1024) {
       setUploadError('This file is over the 5 MB limit. Choose a smaller PDF.')
       input.value = ''
@@ -51,9 +53,13 @@ const MyResumes = () => {
 
     setUploading(true)
     try {
-      await uploadResume(file)
+      const response = await uploadResume(file)
+      if (response.resume?._id) {
+        setActiveResumeId(response.resume._id)
+        setActiveResumeState(response.resume._id)
+      }
       await loadResumes({ silent: true })
-      setUploadSuccess(`${file.name} is ready to use in an interview plan.`)
+      setUploadSuccess(`${file.name} is ready to use in interview plans, SAVIK, ATS, and skill gap analysis.`)
     } catch (error) {
       setUploadError(error?.response?.data?.message || 'Upload failed. Please try again.')
     } finally {
@@ -63,7 +69,9 @@ const MyResumes = () => {
   }
 
   const selectResume = (resume) => {
-    navigate('/', { state: { resumeId: resume._id, fileName: resume.fileName } })
+    setActiveResumeId(resume._id)
+    setActiveResumeState(resume._id)
+    setUploadSuccess(`${resume.fileName} is now your active CV for SAVIK, ATS, and skill gap analysis.`)
   }
 
   const copyResumeAdditions = async (resume) => {
@@ -82,7 +90,7 @@ const MyResumes = () => {
       <main className="container resume-tool-page resumes-page" aria-busy={pageLoading || uploading}>
         <PageHeader
           title="My Resumes"
-          subtitle="Save your PDFs and review resume additions you approved after a Mira interview."
+          subtitle="Choose which saved CV SAVIK, ATS, and skill gap analysis should use by default. Each new interview plan asks you to upload a PDF. Review any approved SAVIK additions below."
           action={(
             <label className="resume-upload-button">
               <input ref={fileInputRef} type="file" accept="application/pdf,.pdf" onChange={onUpload} disabled={uploading} />
@@ -110,17 +118,17 @@ const MyResumes = () => {
           />
         ) : resumes.length > 0 ? (
           <section className="resume-list" aria-label="Saved resumes">
-            <div className="resume-list__heading"><strong>{resumes.length} {resumes.length === 1 ? 'resume' : 'resumes'} saved</strong><span>PDF files · up to 5 MB each</span></div>
+            <div className="resume-list__heading"><strong>{resumes.length} {resumes.length === 1 ? 'resume' : 'resumes'} saved</strong><span>PDF uploads and CVs saved from interview plans</span></div>
             {resumes.map((resume) => (
               <Card key={resume._id} className={`saved-resume-card${resume.confirmedInterviewAchievements?.length ? ' saved-resume-card--has-additions' : ''}`}>
-                <span className="saved-resume-card__icon" aria-hidden="true">PDF</span>
+                <span className="saved-resume-card__icon" aria-hidden="true">{resume.fileName.toLowerCase().endsWith('.pdf') ? 'PDF' : 'CV'}</span>
                 <div className="saved-resume-card__copy"><strong>{resume.fileName}</strong><span>Uploaded {new Date(resume.createdAt).toLocaleDateString()}</span></div>
-                <Button variant="secondary" onClick={() => selectResume(resume)}>Use for interview plan <span aria-hidden="true">→</span></Button>
+                <Button variant={activeResumeId === resume._id ? 'ghost' : 'secondary'} disabled={activeResumeId === resume._id} onClick={() => selectResume(resume)}>{activeResumeId === resume._id ? 'Active CV' : 'Set as active CV'}</Button>
                 {resume.confirmedInterviewAchievements?.length > 0 && (
                   <div className="saved-resume-additions">
                     <div className="saved-resume-additions__heading"><strong>{resume.confirmedInterviewAchievements.length} interview-confirmed resume {resume.confirmedInterviewAchievements.length === 1 ? 'addition' : 'additions'}</strong><Button variant="ghost" size="sm" onClick={() => copyResumeAdditions(resume)}>{copiedResumeId === resume._id ? 'Copied' : 'Copy bullets'}</Button></div>
                     <ul>{resume.confirmedInterviewAchievements.map((item, index) => <li key={`${item._id || item.confirmedAt}-${index}`}>{item.text}</li>)}</ul>
-                    <p>These draft additions are included in future ATS checks and Mira interviews. Add them to your source resume and upload the updated PDF to change that file.</p>
+                    <p>These draft additions are included in future ATS checks and SAVIK interviews. Add them to your source resume and upload the updated PDF to change that file.</p>
                   </div>
                 )}
               </Card>

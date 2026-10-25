@@ -1,5 +1,8 @@
 const express = require('express')
 const authMiddleware = require('../middlewares/auth.middleware')
+const createGeminiUsageLimit = require('../middlewares/geminiUsageLimit.middleware')
+const geminiUsageLimit = createGeminiUsageLimit()
+const geminiUsageLimitWithLocalAtsFallback = createGeminiUsageLimit({ allowLocalAtsFallback: true })
 const upload = require('../middlewares/file.middleware')
 const resumeController = require('../controllers/resume.controller')
 
@@ -19,7 +22,7 @@ router.post('/:resumeId/interview-achievements', authMiddleware.authUser, resume
 
 /* ATS score endpoints */
 const atsController = require('../controllers/ats.controller')
-router.post('/ats-score', authMiddleware.authUser, atsController.createAtsScoreController)
+router.post('/ats-score', authMiddleware.authUser, geminiUsageLimitWithLocalAtsFallback, atsController.createAtsScoreController)
 router.get('/ats-score/:resumeId', authMiddleware.authUser, atsController.listAtsScoresController)
 
 module.exports = router

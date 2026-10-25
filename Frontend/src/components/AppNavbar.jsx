@@ -8,7 +8,7 @@ const NAV_ITEMS = [
   { path: '/', label: 'Prepare', end: true },
   { path: '/dashboard', label: 'Progress' },
   { path: '/ats', label: 'ATS' },
-  { path: '/ai-coach', label: 'Mira' },
+  { path: '/ai-coach', label: 'SAVIK' },
   { path: '/resumes', label: 'Resumes' },
   { path: '/gap-analysis', label: 'Skills' },
 ]

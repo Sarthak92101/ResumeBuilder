@@ -67,7 +67,7 @@ async function saveInterviewAchievementsController(req, res) {
     await resume.save()
 
     res.status(200).json({
-      message: 'Resume additions saved for future ATS checks and Mira interviews',
+      message: 'Resume additions saved for future ATS checks and SAVIK interviews',
       achievements: resume.confirmedInterviewAchievements,
     })
   } catch (error) {

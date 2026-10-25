@@ -272,6 +272,7 @@ const Interview = () => {
     const { report, loading, getResumePdf, lastWarnings } = useInterview()
     const { interviewId } = useParams()
     const location = useLocation()
+    const reportResumeId = report?._id === interviewId ? report.resumeId : null
     const [ pdfLoading, setPdfLoading ] = useState(false)
     const [shareLoading, setShareLoading] = useState(false)
     const [shareToken, setShareToken] = useState(null)
@@ -345,9 +346,17 @@ const Interview = () => {
                     </div>
                     <div className='interview-nav__downloads'>
                         <p className='interview-nav__downloads-label'>AI interview</p>
-                        <Link to='/ai-coach' state={location.state} className='voice-mock-btn'>
+                        <Link
+                            to='/ai-coach'
+                            state={{
+                                ...location.state,
+                                resumeId: reportResumeId || location.state?.resumeId,
+                                targetRole: report.title,
+                            }}
+                            className='voice-mock-btn'
+                        >
                             <Button variant='secondary' size='md' style={{ width: '100%' }}>
-                                Practice with Mira <span aria-hidden='true'>→</span>
+                                Practice with SAVIK <span aria-hidden='true'>→</span>
                             </Button>
                         </Link>
                         <p className='interview-nav__downloads-label'>Practice</p>

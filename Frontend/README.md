@@ -8,8 +8,8 @@ SkillMirror is an interview-preparation and resume toolkit. It creates role-spec
 - **Developer profile context:** Optionally include GitHub, LeetCode, and Codeforces profiles when creating a plan.
 - **Interview practice:** Review questions and sample answers, check answers with STAR feedback, and use the coding and grammar practice tools.
 - **Voice Mock Interview:** Hear plan questions, answer by voice, and get feedback on your responses.
-- **Mira AI Avatar Interview:** Have a spoken, CV-aware interview with adaptive follow-up questions. Mira supports English, Hindi, and Hinglish.
-- **Interview-to-resume loop:** After Mira, review and edit bullet suggestions grounded in your spoken answers. Save only the details you confirm; they feed later ATS checks, Mira interviews, and LaTeX resume drafts. The original uploaded PDF remains untouched.
+- **SAVIK AI Avatar Interview:** Have a spoken, CV-aware interview with adaptive follow-up questions. SAVIK supports English, Hindi, and Hinglish.
+- **Interview-to-resume loop:** After SAVIK, review and edit bullet suggestions grounded in your spoken answers. Save only the details you confirm; they feed later ATS checks, SAVIK interviews, and LaTeX resume drafts. The original uploaded PDF remains untouched.
 - **Resume tools:** Save PDF resumes, create LaTeX-formatted resume PDFs, and check ATS estimates with keyword gaps and improvement suggestions.
 - **Progress and sharing:** Review preparation progress and share an interview report with a mentor for comments.
 - **Polished interface:** Light and dark themes, responsive layouts, animated interactions, and descriptive loading states.
@@ -20,7 +20,7 @@ SkillMirror is an interview-preparation and resume toolkit. It creates role-spec
 | --- | --- |
 | Frontend | React, Vite, React Router, Sass |
 | Backend | Node.js, Express, MongoDB, Mongoose |
-| AI | Google Gemini via the Interactions API |
+| AI | OpenAI Responses API for SAVIK interviews and resume suggestions; Google Gemini for interview plans, ATS, STAR feedback, and other analysis |
 | PDF export | Tectonic for LaTeX resumes; Puppeteer for interview-plan PDFs |
 
 The frontend and backend are separate apps in the `Frontend` and `Backend` folders.
@@ -45,6 +45,9 @@ MONGO_URI=mongodb://127.0.0.1:27017/interview-master
 JWT_SECRET=replace_with_a_long_random_secret
 GOOGLE_API_KEY=your_google_api_key
 GEMINI_MODEL=gemini-3.8-flash
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=gpt-6-luna
+OPENAI_REASONING_EFFORT=none
 FRONTEND_URL=http://localhost:5173
 ```
 
@@ -70,7 +73,7 @@ For local development, set `VITE_API_URL=http://localhost:3000` in `Frontend/.en
 
 ## Voice interview requirements
 
-The voice experiences use browser speech recognition and speech synthesis. Use a supported browser such as Chrome or Edge and allow microphone access. Mira's AI replies require a valid Gemini API key on the backend. The Voice Mock Interview and Mira AI Avatar Interview are separate experiences.
+The voice experiences use browser speech recognition and speech synthesis. Use a supported browser such as Chrome or Edge and allow microphone access. SAVIK's AI replies require a valid OpenAI API key on the backend. Other AI features continue to require Gemini. The Voice Mock Interview and SAVIK AI Avatar Interview are separate experiences.
 
 ## Useful commands
 
@@ -94,5 +97,5 @@ npm start         # Start the server
 
 - Set `VITE_API_URL` to the deployed backend URL when building the frontend.
 - Set `FRONTEND_URL` to the deployed frontend origin in the backend environment so credentialed API requests pass CORS checks.
-- Configure MongoDB, `JWT_SECRET`, and `GOOGLE_API_KEY` in the backend host's environment. Do not commit `.env` files or API keys.
+- Configure MongoDB, `JWT_SECRET`, `OPENAI_API_KEY`, and `GOOGLE_API_KEY` in the backend host's environment. Do not commit `.env` files or API keys.
 - Install Tectonic on the backend host if users need LaTeX resume PDF exports.

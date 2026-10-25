@@ -23,7 +23,11 @@ async function createAtsScoreController(req, res) {
     let usedFallback = false
 
     // If Gemini key isn't configured, skip AI and use fallback
-    if (!process.env.GOOGLE_API_KEY) {
+    if (req.geminiLimitReached) {
+      usedFallback = true
+      console.info('Gemini user limit reached — using local ATS fallback')
+      aiResult = computeFallbackAts(resumeText, jobDesc)
+    } else if (!process.env.GOOGLE_API_KEY) {
       usedFallback = true
       console.warn('GOOGLE_API_KEY missing — using local ATS fallback')
       aiResult = computeFallbackAts(resumeText, jobDesc)

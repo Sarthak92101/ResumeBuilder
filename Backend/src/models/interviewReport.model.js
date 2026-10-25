@@ -188,6 +188,11 @@ const interviewReportSchema = new mongoose.Schema({
     type:mongoose.Schema.Types.ObjectId,
     ref:"user",
   },
+  resumeId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "resume",
+    default: null,
+  },
   title: {
     type: String,
     required: [true, "Title is required"]

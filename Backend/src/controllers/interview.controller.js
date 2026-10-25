@@ -5,6 +5,7 @@ const {
   generateInterviewPlanPdf,
 } = require("../services/pdfExport.service")
 const interviewReportModel = require("../models/interviewReport.model")
+const resumeModel = require("../models/resume.model")
 const { fetchGitHubSummary } = require("../services/github.service")
 const { fetchLeetCodeSummary } = require("../services/leetcode.service")
 const { fetchCodeforcesSummary } = require("../services/codeforces.service")
@@ -41,12 +42,16 @@ async function generateInterviewReportController(req, res) {
     }
 
     let resumeText = selfDescription
+    let linkedResumeId = null
 
     // If the client provided a resumeId to reuse a previously uploaded resume
-    if (req.body?.resumeId) {
+    if (req.body?.resumeId && !req.file) {
       try {
-        const resumeModel = require("../models/resume.model")
-        const saved = await resumeModel.findOne({ _id: req.body.resumeId, user: req.user.id })
+        const saved = await resumeModel
+          .findOne({ _id: req.body.resumeId, user: req.user.id })
+          .select("extractedText confirmedInterviewAchievements")
+          .lean()
+        if (saved) linkedResumeId = req.body.resumeId
         if (saved?.extractedText) {
           resumeText = appendConfirmedAchievements(saved.extractedText, saved.confirmedInterviewAchievements)
         }
@@ -66,39 +71,52 @@ async function generateInterviewReportController(req, res) {
       console.log("PDF parsed successfully, text length:", resumeText.length)
     }
 
-    // Fetch optional developer profiles gracefully — a third-party API failure
-    // must never block or crash the report generation flow.
+    // Fetch optional profiles concurrently so the slowest profile request, rather
+    // than the sum of all requests, determines the wait before AI generation.
     const warnings = []
-    let githubSummary = null
-    let leetcodeSummary = null
-    let codeforcesSummary = null
-
-    if (githubUsername) {
-      try {
-        githubSummary = await fetchGitHubSummary(githubUsername)
-      } catch (error) {
-        console.warn("GitHub profile fetch failed:", error.message)
-        warnings.push(`Couldn't fetch GitHub data for "${githubUsername}", continuing with resume only.`)
-      }
+    const profileSummaries = {
+      githubSummary: null,
+      leetcodeSummary: null,
+      codeforcesSummary: null,
     }
+    const profileRequests = [
+      githubUsername && {
+        key: "githubSummary",
+        label: "GitHub",
+        username: githubUsername,
+        fetch: () => fetchGitHubSummary(githubUsername),
+      },
+      leetcodeUsername && {
+        key: "leetcodeSummary",
+        label: "LeetCode",
+        username: leetcodeUsername,
+        fetch: () => fetchLeetCodeSummary(leetcodeUsername),
+      },
+      codeforcesHandle && {
+        key: "codeforcesSummary",
+        label: "Codeforces",
+        username: codeforcesHandle,
+        fetch: () => fetchCodeforcesSummary(codeforcesHandle),
+      },
+    ].filter(Boolean)
 
-    if (leetcodeUsername) {
-      try {
-        leetcodeSummary = await fetchLeetCodeSummary(leetcodeUsername)
-      } catch (error) {
-        console.warn("LeetCode profile fetch failed:", error.message)
-        warnings.push(`Couldn't fetch LeetCode data for "${leetcodeUsername}", continuing with resume only.`)
-      }
-    }
+    const profileResults = await Promise.allSettled(
+      profileRequests.map(({ fetch }) => fetch())
+    )
 
-    if (codeforcesHandle) {
-      try {
-        codeforcesSummary = await fetchCodeforcesSummary(codeforcesHandle)
-      } catch (error) {
-        console.warn("Codeforces profile fetch failed:", error.message)
-        warnings.push(`Couldn't fetch Codeforces data for "${codeforcesHandle}", continuing with resume only.`)
+    profileResults.forEach((result, index) => {
+      const { key, label, username } = profileRequests[index]
+      if (result.status === "fulfilled") {
+        profileSummaries[key] = result.value
+        return
       }
-    }
+
+      const message = result.reason?.message || String(result.reason)
+      console.warn(`${label} profile fetch failed:`, message)
+      warnings.push(`Couldn't fetch ${label} data for "${username}", continuing with resume only.`)
+    })
+
+    const { githubSummary, leetcodeSummary, codeforcesSummary } = profileSummaries
 
     const interviewReportByAi = await generateInterviewReport({
       resume: resumeText,
@@ -111,8 +129,20 @@ async function generateInterviewReportController(req, res) {
       codeforcesSummary,
     })
 
+    // Save newly uploaded plan resumes into the shared resume library so SAVIK,
+    // ATS, and other resume tools can reuse the same extracted text.
+    if (req.file) {
+      const savedResume = await resumeModel.create({
+        user: req.user.id,
+        fileName: req.file.originalname,
+        extractedText: resumeText,
+      })
+      linkedResumeId = savedResume._id
+    }
+
     const interviewReport = await interviewReportModel.create({
       user: req.user.id,
+      resumeId: linkedResumeId,
       resume: resumeText,
       selfDescription,
       jobDescription,
@@ -163,6 +193,26 @@ async function getInterviewReportByIdController(req, res) {
       return res.status(404).json({
         message: "Interview report not found",
       })
+    }
+
+    // Older plans stored extracted resume text on the report but did not link a
+    // library resume. Import it once so SAVIK and ATS can reuse those plans too.
+    if (!interviewReport.resumeId && interviewReport.resume?.trim()) {
+      const importedFileName = `Resume from ${String(interviewReport.title || "interview plan").trim().slice(0, 120)}`
+      let savedResume = await resumeModel
+        .findOne({ user: req.user.id, fileName: importedFileName, extractedText: interviewReport.resume })
+        .select("_id")
+
+      if (!savedResume) {
+        savedResume = await resumeModel.create({
+          user: req.user.id,
+          fileName: importedFileName,
+          extractedText: interviewReport.resume,
+        })
+      }
+
+      interviewReport.resumeId = savedResume._id
+      await interviewReport.save()
     }
 
     res.status(200).json({
@@ -487,7 +537,7 @@ async function avatarResumeInsightsController(req, res) {
       return res.status(400).json({ message: 'Choose a valid saved CV to review interview answers' })
     }
     if (!conversation.some((item) => item.role === 'user')) {
-      return res.status(400).json({ message: 'Mira needs at least one spoken answer to find resume additions' })
+      return res.status(400).json({ message: 'SAVIK needs at least one spoken answer to find resume additions' })
     }
 
     const resumeModel = require('../models/resume.model')
@@ -504,7 +554,7 @@ async function avatarResumeInsightsController(req, res) {
     res.status(200).json({ message: 'Resume additions drafted', suggestions: result.suggestions })
   } catch (error) {
     console.error('Avatar interview resume insights error:', error)
-    res.status(502).json({ message: error.message || 'Mira could not prepare resume additions right now' })
+    res.status(502).json({ message: error.message || 'SAVIK could not prepare resume additions right now' })
   }
 }
 

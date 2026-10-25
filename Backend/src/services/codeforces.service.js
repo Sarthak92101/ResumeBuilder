@@ -1,6 +1,8 @@
 const API_BASE = "https://codeforces.com/api"
 const TIMEOUT_MS = 12000
 const MAX_RETRIES = 2
+const createTtlCache = require("../utils/ttlCache")
+const getCachedProfile = createTtlCache()
 
 async function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -22,6 +24,10 @@ async function fetchCodeforcesSummary(handle) {
     throw new Error("Codeforces handle is required")
   }
 
+  return getCachedProfile(normalized.toLowerCase(), () => fetchCodeforcesSummaryFresh(normalized))
+}
+
+async function fetchCodeforcesSummaryFresh(normalized) {
   let lastError
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {

@@ -4,6 +4,8 @@ const TIMEOUT_MS = 8000
 const README_TIMEOUT_MS = 5000
 const REPO_LIMIT = 6
 const README_MAX_CHARS = 600
+const createTtlCache = require("../utils/ttlCache")
+const getCachedProfile = createTtlCache()
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = TIMEOUT_MS) {
   const controller = new AbortController()
@@ -72,6 +74,10 @@ async function fetchGitHubSummary(username) {
     throw new Error("GitHub username is required")
   }
 
+  return getCachedProfile(normalized.toLowerCase(), () => fetchGitHubSummaryFresh(normalized))
+}
+
+async function fetchGitHubSummaryFresh(normalized) {
   let reposRes
   try {
     reposRes = await fetchWithTimeout(`${GITHUB_API}/users/${encodeURIComponent(normalized)}/repos?sort=updated&per_page=${REPO_LIMIT}`, {

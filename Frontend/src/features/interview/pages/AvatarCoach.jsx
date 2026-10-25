@@ -3,6 +3,8 @@ import { Link, useLocation } from 'react-router-dom'
 import AppNavbar from '../../../components/AppNavbar'
 import { Button, Card, Input, PageHeader, Select, Textarea } from '../../../components/ui'
 import { listResumes, saveInterviewAchievements } from '../../resume/services/resume.api'
+import { getActiveResumeId, setActiveResumeId } from '../../resume/services/activeResume'
+import ResumePicker from '../../resume/components/ResumePicker'
 import { getAvatarResumeInsights, sendAvatarInterviewTurn } from '../services/interview.api'
 import './avatarCoach.scss'
 
@@ -17,10 +19,11 @@ const AvatarCoach = () => {
   const location = useLocation()
   const [resumes, setResumes] = useState([])
   const [resumesLoading, setResumesLoading] = useState(true)
+  const [resumeUploading, setResumeUploading] = useState(false)
   const [resumeLoadError, setResumeLoadError] = useState('')
   const [resumeRetry, setResumeRetry] = useState(0)
-  const [selectedResumeId, setSelectedResumeId] = useState(location.state?.resumeId || '')
-  const [targetRole, setTargetRole] = useState('Software Developer')
+  const [selectedResumeId, setSelectedResumeId] = useState(() => location.state?.resumeId || getActiveResumeId())
+  const [targetRole, setTargetRole] = useState(() => location.state?.targetRole || 'Software Developer')
   const [interviewLanguage, setInterviewLanguage] = useState('hinglish')
   const [interviewStarted, setInterviewStarted] = useState(false)
   const [messages, setMessages] = useState([])
@@ -116,7 +119,7 @@ const AvatarCoach = () => {
       idlePromptedForQuestionRef.current = true
       idlePromptActiveRef.current = true
       const reminder = {
-        id: `mira-idle-${Date.now()}`,
+        id: `savik-idle-${Date.now()}`,
         role: 'assistant',
         text: getLanguagePrompt(
           'Kaafi der ho gayi—kya hum is question ko skip karein?',
@@ -291,7 +294,7 @@ const AvatarCoach = () => {
       if (declinesSkip) {
         removeIdlePromptMessage()
         const acknowledgement = {
-          id: `mira-wait-${Date.now()}`,
+          id: `savik-wait-${Date.now()}`,
           role: 'assistant',
           text: getLanguagePrompt(
             'Theek hai, aap apna jawab dijiye.',
@@ -340,23 +343,33 @@ const AvatarCoach = () => {
     try {
       const microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: true })
       microphoneStream.getTracks().forEach((track) => track.stop())
-      const response = await sendAvatarInterviewTurn({
-        action: 'start',
-        resumeId: selectedResumeId,
-        targetRole: targetRole.trim(),
-        language: interviewLanguage,
-        history: [],
-      })
-      const opening = { id: `mira-${Date.now()}`, role: 'assistant', text: response.reply }
+      const opening = {
+        id: `savik-${Date.now()}`,
+        role: 'assistant',
+        text: getLanguagePrompt(
+          'Hi! Main SAVIK hoon. Aapka CV mere paas hai. Pehle bataiye, main aapko kis naam se bulaun?',
+          "Hi! I'm SAVIK. I have your CV ready. What would you like me to call you?",
+          'नमस्ते! मैं SAVIK हूँ। आपका CV मेरे पास है। पहले बताइए, मैं आपको किस नाम से बुलाऊँ?'
+        ),
+      }
       replaceMessages([opening])
       interviewStartedRef.current = true
       setInterviewStarted(true)
       shouldListenRef.current = true
       speakMessage(opening.id, opening.text)
     } catch (startError) {
+      interviewStartedRef.current = false
+      shouldListenRef.current = false
+      setInterviewStarted(false)
+      speechQueueRef.current = []
+      activeUtteranceRef.current = null
+      window.speechSynthesis.cancel()
+      speakingRef.current = false
+      setSpeakingId(null)
+      replaceMessages([])
       setError(startError.name === 'NotAllowedError'
         ? 'Microphone access is needed for a voice interview. Allow it in your browser and try again.'
-        : startError.response?.data?.message || startError.message || 'Mira couldn’t review this CV. Please try again.')
+        : startError.response?.data?.message || startError.message || 'SAVIK couldn’t start the interview. Please try again.')
     } finally {
       updateThinking(false)
     }
@@ -384,13 +397,13 @@ const AvatarCoach = () => {
     let partialReply = ''
     let speechBuffer = ''
     let hasQueuedReplySpeech = false
-    const followUpId = `mira-${Date.now()}`
+    const followUpId = `savik-${Date.now()}`
     const handleReplyChunk = (chunk) => {
       partialReply += chunk
       speechBuffer += chunk
       updateMessageText(followUpId, partialReply)
 
-      // Start Mira as soon as the first complete sentence arrives, while the
+      // Start SAVIK as soon as the first complete sentence arrives, while the
       // remaining words are still streaming from the model.
       const sentenceEnd = /[?!।](?:["')\]]*)?(?=\s|$)|\.(?:["')\]]*)?(?=\s)/u
       let boundary = speechBuffer.match(sentenceEnd)
@@ -430,7 +443,7 @@ const AvatarCoach = () => {
         queueSpeech(followUpId, replyText)
       }
     } catch (turnError) {
-      setError(turnError.response?.data?.message || turnError.message || 'Mira couldn’t continue the interview. Please try again.')
+      setError(turnError.response?.data?.message || turnError.message || 'SAVIK couldn’t continue the interview. Please try again.')
       speechQueueRef.current = []
       activeUtteranceRef.current = null
       window.speechSynthesis.cancel()
@@ -441,7 +454,7 @@ const AvatarCoach = () => {
       idlePromptActiveRef.current = false
       if (isFirstAnswer) candidateIntroRef.current = ''
       const retryPrompt = {
-        id: `mira-retry-${Date.now()}`,
+        id: `savik-retry-${Date.now()}`,
         role: 'assistant',
         text: getLanguagePrompt(
           'Mujhe jawab process karne mein dikkat hui. Please apna jawab ek baar phir boliye.',
@@ -502,7 +515,7 @@ const AvatarCoach = () => {
       })
       setResumeSuggestions((response.suggestions || []).map((item) => ({ ...item, accepted: false })))
     } catch (insightsError) {
-      setWrapUpError(insightsError.response?.data?.message || insightsError.message || 'Mira couldn’t prepare resume additions. Please try again.')
+      setWrapUpError(insightsError.response?.data?.message || insightsError.message || 'SAVIK couldn’t prepare resume additions. Please try again.')
     } finally {
       setWrapUpLoading(false)
     }
@@ -516,7 +529,7 @@ const AvatarCoach = () => {
       const response = await getAvatarResumeInsights({ resumeId: selectedResumeId, targetRole: targetRole.trim(), conversation })
       setResumeSuggestions((response.suggestions || []).map((item) => ({ ...item, accepted: false })))
     } catch (insightsError) {
-      setWrapUpError(insightsError.response?.data?.message || insightsError.message || 'Mira couldn’t prepare resume additions. Please try again.')
+      setWrapUpError(insightsError.response?.data?.message || insightsError.message || 'SAVIK couldn’t prepare resume additions. Please try again.')
     } finally {
       setWrapUpLoading(false)
     }
@@ -583,10 +596,15 @@ const AvatarCoach = () => {
         const response = await listResumes()
         if (cancelled) return
         const savedResumes = response.resumes || []
-        setResumes(savedResumes)
-        setSelectedResumeId((current) => savedResumes.some((resume) => resume._id === current)
-          ? current
-          : savedResumes[0]?._id || '')
+        const preferredId = location.state?.resumeId || getActiveResumeId()
+        const linkedResume = location.state?.resumeId
+          ? savedResumes.find((resume) => resume._id === location.state.resumeId)
+          : null
+        const preferred = linkedResume || savedResumes.find((resume) => resume._id === preferredId)
+        const next = preferred || savedResumes[0]
+        setResumes(linkedResume ? [linkedResume] : savedResumes)
+        setSelectedResumeId(next?._id || '')
+        if (next?._id) setActiveResumeId(next._id)
       } catch (loadError) {
         if (!cancelled) setResumeLoadError(loadError.response?.data?.message || 'We couldn’t load your saved CVs.')
       } finally {
@@ -596,7 +614,7 @@ const AvatarCoach = () => {
 
     loadResumes()
     return () => { cancelled = true }
-  }, [resumeRetry])
+  }, [location.state?.resumeId, resumeRetry])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
@@ -627,29 +645,29 @@ const AvatarCoach = () => {
       <main className="container ai-coach-page">
         <PageHeader
           title="AI Avatar Interview"
-          subtitle="Mira speaks, listens to your answers, and asks natural follow-up questions about your CV. Hinglish is available."
+          subtitle="SAVIK speaks, listens to your answers, and asks natural follow-up questions about your CV. Hinglish is available."
           action={<Link to="/" className="ai-coach-back-link">Interview plans <span aria-hidden="true">→</span></Link>}
         />
 
         <div className="ai-coach-layout">
           <Card className="ai-coach-profile-card">
-            <div className={`ai-coach-avatar ai-coach-avatar--${avatarMode}`} role="img" aria-label={`Mira avatar is ${avatarMode}`}>
+            <div className={`ai-coach-avatar ai-coach-avatar--${avatarMode}`} role="img" aria-label={`SAVIK avatar is ${avatarMode}`}>
               <div className="ai-coach-avatar__halo ai-coach-avatar__halo--outer" />
               <div className="ai-coach-avatar__halo ai-coach-avatar__halo--inner" />
               <svg className="ai-coach-avatar__portrait" viewBox="0 0 240 240" aria-hidden="true">
                 <defs>
-                  <linearGradient id="mira-bg" x1="0" y1="0" x2="1" y2="1">
+                  <linearGradient id="savik-bg" x1="0" y1="0" x2="1" y2="1">
                     <stop offset="0" stopColor="var(--color-accent)" />
                     <stop offset="1" stopColor="var(--color-accent-secondary)" />
                   </linearGradient>
-                  <linearGradient id="mira-top" x1="0" y1="0" x2="1" y2="1">
+                  <linearGradient id="savik-top" x1="0" y1="0" x2="1" y2="1">
                     <stop offset="0" stopColor="#A896FF" />
                     <stop offset="1" stopColor="#6C5CE7" />
                   </linearGradient>
                 </defs>
-                <circle cx="120" cy="120" r="108" fill="url(#mira-bg)" opacity=".16" />
+                <circle cx="120" cy="120" r="108" fill="url(#savik-bg)" opacity=".16" />
                 <circle cx="120" cy="120" r="90" fill="var(--color-surface)" />
-                <path d="M47 211c8-42 34-63 73-63s65 21 73 63" fill="url(#mira-top)" />
+                <path d="M47 211c8-42 34-63 73-63s65 21 73 63" fill="url(#savik-top)" />
                 <path d="M82 145c8 10 20 16 38 16s30-6 38-16l-4-20H86z" fill="#E6A889" />
                 <ellipse cx="120" cy="105" rx="47" ry="57" fill="#F1C2A5" />
                 <path d="M73 103c-4-39 17-66 50-66 36 0 51 24 46 68-7-8-12-20-14-30-18 12-44 17-77 14-1 5-3 10-5 14z" fill="#302747" />
@@ -667,70 +685,70 @@ const AvatarCoach = () => {
 
             <div className="ai-coach-profile-copy">
               <span className="ai-coach-eyebrow">SKILLMIRROR AI</span>
-              <h2>Mira</h2>
+              <h2>SAVIK</h2>
               <p>Your CV-aware interviewer. She asks one question at a time and follows up on your answers.</p>
             </div>
 
             <div className={`ai-coach-status ai-coach-status--${avatarMode}`} aria-live="polite">
               <span aria-hidden="true" />
               {avatarMode === 'thinking'
-                ? interviewStarted ? 'Choosing a follow-up question' : 'Reviewing your CV'
-                  : avatarMode === 'speaking' ? 'Mira is speaking'
+                  ? interviewStarted ? 'Choosing a follow-up question' : 'Starting your interview'
+                  : avatarMode === 'speaking' ? 'SAVIK is speaking'
                   : avatarMode === 'listening' ? 'Listening to your answer'
                     : interviewStarted ? 'Waiting for your answer' : wrapUpComplete ? 'Interview recap ready' : 'Ready to interview'}
             </div>
 
             {!interviewStarted && !wrapUpComplete ? (
               <div className="ai-coach-setup">
-                {resumesLoading && <div className="ai-coach-load-status" role="status"><span className="ai-coach-inline-spinner" /> Loading saved CVs…</div>}
+                {resumesLoading && <div className="ai-coach-load-status" role="status"><span className="ai-coach-inline-spinner" /> Loading your CV…</div>}
                 {resumeLoadError && (
                   <div className="ai-coach-load-error" role="alert">
                     <span>{resumeLoadError}</span>
                     <Button type="button" variant="secondary" size="sm" onClick={() => setResumeRetry((key) => key + 1)}>Try again</Button>
                   </div>
                 )}
-                {!resumesLoading && !resumeLoadError && resumes.length === 0 && (
-                  <div className="ai-coach-no-resume">
-                    <strong>Upload a CV to begin</strong>
-                    <span>Mira needs a saved CV to ask about your actual projects and experience.</span>
-                    <Link to="/resumes">Go to My Resumes <span aria-hidden="true">→</span></Link>
+                <ResumePicker
+                  label="Choose your CV"
+                  value={selectedResumeId}
+                  resumes={resumes}
+                  disabled={resumesLoading || isThinking}
+                  onUploadingChange={setResumeUploading}
+                  placeholder="Choose a CV"
+                  helperText="Your active CV is selected by default."
+                  onChange={setSelectedResumeId}
+                  onResumeUploaded={(resume) => setResumes((current) => (
+                    location.state?.resumeId
+                      ? [resume]
+                      : [resume, ...current.filter((item) => item._id !== resume._id)]
+                  ))}
+                />
+                <Input
+                  label="Interview role"
+                  value={targetRole}
+                  maxLength={100}
+                  onChange={(event) => setTargetRole(event.target.value)}
+                  placeholder="e.g. Frontend Developer"
+                  disabled={isThinking}
+                />
+                <Select label="Interview language" value={interviewLanguage} disabled={isThinking} onChange={(event) => setInterviewLanguage(event.target.value)}>
+                  <option value="hinglish">Hinglish (recommended)</option>
+                  <option value="en">English</option>
+                  <option value="hi">Hindi</option>
+                </Select>
+                {!voiceInterviewSupported && (
+                  <div className="ai-coach-voice-support" role="status">
+                    Live voice interview needs speech recognition and audio playback. Open this page in Chrome or Edge and allow microphone access.
                   </div>
                 )}
-                {resumes.length > 0 && (
-                  <>
-                    <Select label="Choose your CV" value={selectedResumeId} disabled={resumesLoading || isThinking} onChange={(event) => setSelectedResumeId(event.target.value)}>
-                      <option value="">Select a saved CV</option>
-                      {resumes.map((resume) => <option key={resume._id} value={resume._id}>{resume.fileName}</option>)}
-                    </Select>
-                    <Input
-                      label="Interview role"
-                      value={targetRole}
-                      maxLength={100}
-                      onChange={(event) => setTargetRole(event.target.value)}
-                      placeholder="e.g. Frontend Developer"
-                      disabled={isThinking}
-                    />
-                    <Select label="Interview language" value={interviewLanguage} disabled={isThinking} onChange={(event) => setInterviewLanguage(event.target.value)}>
-                      <option value="hinglish">Hinglish (recommended)</option>
-                      <option value="en">English</option>
-                      <option value="hi">Hindi</option>
-                    </Select>
-                    {!voiceInterviewSupported && (
-                      <div className="ai-coach-voice-support" role="status">
-                        Live voice interview needs speech recognition and audio playback. Open this page in Chrome or Edge and allow microphone access.
-                      </div>
-                    )}
-                    <Button type="button" variant="primary" onClick={startInterview} disabled={!selectedResumeId || !targetRole.trim() || isThinking || !voiceInterviewSupported}>
-                      {isThinking ? 'Reviewing your CV…' : 'Start AI interview'}
-                      {isThinking && <span className="ai-coach-inline-spinner ai-coach-inline-spinner--button" aria-hidden="true" />}
-                    </Button>
-                    <ol className="ai-coach-interview-steps">
-                      <li>Mira asks what to call you.</li>
-                      <li>She picks a real detail from your CV.</li>
-                      <li>Speak naturally; Mira listens after each question.</li>
-                    </ol>
-                  </>
-                )}
+                <Button type="button" variant="primary" onClick={startInterview} disabled={!selectedResumeId || !targetRole.trim() || isThinking || resumeUploading || !voiceInterviewSupported}>
+                  {resumeUploading ? 'Saving your CV…' : isThinking ? 'Starting SAVIK…' : 'Start AI interview'}
+                  {(isThinking || resumeUploading) && <span className="ai-coach-inline-spinner ai-coach-inline-spinner--button" aria-hidden="true" />}
+                </Button>
+                <ol className="ai-coach-interview-steps">
+                  <li>SAVIK asks what to call you.</li>
+                  <li>She picks a real detail from your CV.</li>
+                  <li>Speak naturally; SAVIK listens after each question.</li>
+                </ol>
               </div>
             ) : (
               <div className="ai-coach-session-info">
@@ -747,13 +765,13 @@ const AvatarCoach = () => {
 
             <div className="ai-coach-separation-note">
               <span aria-hidden="true">✦</span>
-              <p>Speak your answers; Mira listens after each question. Voice Mock Interview remains a separate feature.</p>
+              <p>Speak your answers; SAVIK listens after each question. Voice Mock Interview remains a separate feature.</p>
             </div>
           </Card>
 
           <Card className="ai-coach-chat-card">
             <div className="ai-coach-chat-heading">
-              <div><span>{wrapUpComplete ? 'INTERVIEW TO RESUME' : 'LIVE INTERVIEW'}</span><h2>{interviewStarted ? 'Your conversation with Mira' : wrapUpComplete ? 'Your interview recap' : 'Your interview room'}</h2></div>
+              <div><span>{wrapUpComplete ? 'INTERVIEW TO RESUME' : 'LIVE INTERVIEW'}</span><h2>{interviewStarted ? 'Your conversation with SAVIK' : wrapUpComplete ? 'Your interview recap' : 'Your interview room'}</h2></div>
               <span className="ai-coach-chat-heading__mode"><span aria-hidden="true" /> {interviewStarted ? 'In progress' : wrapUpComplete ? 'Review additions' : 'CV-based'}</span>
             </div>
 
@@ -762,7 +780,7 @@ const AvatarCoach = () => {
                 <article className={`ai-coach-message ai-coach-message--${message.role}`} key={message.id}>
                   {message.role === 'assistant' && <span className="ai-coach-message__avatar" aria-hidden="true">M</span>}
                   <div className="ai-coach-message__bubble">
-                    <span className="ai-coach-message__sender">{message.role === 'assistant' ? 'Mira · Interviewer' : 'You'}</span>
+                    <span className="ai-coach-message__sender">{message.role === 'assistant' ? 'SAVIK · Interviewer' : 'You'}</span>
                     <p>{message.text}</p>
                   </div>
                 </article>
@@ -772,8 +790,8 @@ const AvatarCoach = () => {
                 <article className="ai-coach-message ai-coach-message--assistant" role="status">
                   <span className="ai-coach-message__avatar" aria-hidden="true">M</span>
                   <div className="ai-coach-message__bubble ai-coach-message__bubble--thinking">
-                    <span className="ai-coach-message__sender">Mira · Interviewer</span>
-                    <span className="ai-coach-thinking-dots" aria-label="Mira is thinking"><i /><i /><i /></span>
+                    <span className="ai-coach-message__sender">SAVIK · Interviewer</span>
+                    <span className="ai-coach-thinking-dots" aria-label="SAVIK is thinking"><i /><i /><i /></span>
                   </div>
                 </article>
               )}
@@ -782,7 +800,7 @@ const AvatarCoach = () => {
                 <div className="ai-coach-empty-room">
                   <span aria-hidden="true">✦</span>
                   <strong>Choose your CV and role to begin</strong>
-                  <p>Mira will open by asking your name, then use details from the selected CV to guide the interview.</p>
+                  <p>SAVIK will open by asking your name, then use details from the selected CV to guide the interview.</p>
                 </div>
               )}
               <div ref={messagesEndRef} />
@@ -795,7 +813,7 @@ const AvatarCoach = () => {
                 {wrapUpLoading ? (
                   <div className="ai-coach-wrapup-loading" role="status">
                     <span className="ai-coach-inline-spinner" aria-hidden="true" />
-                    <div><strong>Mira is reviewing your answers</strong><p>Finding details you shared that could strengthen this CV.</p></div>
+                    <div><strong>SAVIK is reviewing your answers</strong><p>Finding details you shared that could strengthen this CV.</p></div>
                   </div>
                 ) : wrapUpError ? (
                   <div className="ai-coach-resume-review__empty" role="alert">
@@ -806,10 +824,10 @@ const AvatarCoach = () => {
                 ) : resumeSuggestions.length ? (
                   <>
                     <div className="ai-coach-resume-review__heading">
-                      <div><span>MIRA FOUND SOME DRAFT IDEAS</span><h3>Review before saving</h3></div>
+                      <div><span>SAVIK FOUND SOME DRAFT IDEAS</span><h3>Review before saving</h3></div>
                       <span>{resumeSuggestions.length} {resumeSuggestions.length === 1 ? 'draft' : 'drafts'}</span>
                     </div>
-                    <p className="ai-coach-resume-review__note">Edit each line and tick only details you can stand behind. These are based on your answers and aren’t independently verified. Your uploaded PDF stays unchanged; approved additions are used in future Mira interviews and ATS checks.</p>
+                    <p className="ai-coach-resume-review__note">Edit each line and tick only details you can stand behind. These are based on your answers and aren’t independently verified. Your uploaded PDF stays unchanged; approved additions are used in future SAVIK interviews and ATS checks.</p>
                     <div className="ai-coach-resume-suggestions">
                       {resumeSuggestions.map((item, index) => (
                         <article className="ai-coach-resume-suggestion" key={`${index}-${item.sourceAnswer}`}>
@@ -824,12 +842,12 @@ const AvatarCoach = () => {
                             rows={3}
                             onChange={(event) => updateResumeSuggestion(index, 'text', event.target.value)}
                           />
-                          <details><summary>What you told Mira</summary><p>{item.sourceAnswer}</p></details>
+                          <details><summary>What you told SAVIK</summary><p>{item.sourceAnswer}</p></details>
                         </article>
                       ))}
                     </div>
                     {achievementSaveError && <p className="ai-coach-error" role="alert">{achievementSaveError}</p>}
-                    {achievementSaved && <p className="ai-coach-save-success" role="status">Saved. Future ATS checks and Mira interviews will include your approved additions.</p>}
+                    {achievementSaved && <p className="ai-coach-save-success" role="status">Saved. Future ATS checks and SAVIK interviews will include your approved additions.</p>}
                     <div className="ai-coach-resume-review__actions">
                       <Button type="button" variant="primary" onClick={confirmResumeAchievements} disabled={savingAchievements || !resumeSuggestions.some((item) => item.accepted && item.text.trim())}>
                         {savingAchievements ? 'Saving additions…' : 'Save selected additions'}
@@ -841,7 +859,7 @@ const AvatarCoach = () => {
                 ) : (
                   <div className="ai-coach-resume-review__empty">
                     <strong>No new resume bullets this time</strong>
-                    <p>Mira didn’t find a clear, new detail in your answers to add. You can still use this interview to practise your responses.</p>
+                    <p>SAVIK didn’t find a clear, new detail in your answers to add. You can still use this interview to practise your responses.</p>
                     <Button type="button" variant="secondary" size="sm" onClick={startAnotherInterview}>Start another interview</Button>
                   </div>
                 )}
@@ -850,8 +868,8 @@ const AvatarCoach = () => {
               <div className={`ai-coach-voice-console${isListening ? ' ai-coach-voice-console--listening' : ''}`} role="status" aria-live="polite">
                 <span className="ai-coach-voice-console__mic" aria-hidden="true">{isListening ? '●' : '◉'}</span>
                 <div className="ai-coach-voice-console__copy">
-                  <strong>{isThinking ? 'Mira is thinking…' : speakingId ? 'Mira is speaking…' : isListening ? 'Listening — speak naturally' : 'Mira will listen after speaking'}</strong>
-                  <p role={voiceError ? 'alert' : undefined}>{voiceError || (voiceTranscript ? `Heard: ${voiceTranscript}` : isListening ? 'Your spoken answer will appear here as a transcript.' : 'Your microphone starts automatically after Mira finishes her question.')}</p>
+                  <strong>{isThinking ? 'SAVIK is thinking…' : speakingId ? 'SAVIK is speaking…' : isListening ? 'Listening — speak naturally' : 'SAVIK will listen after speaking'}</strong>
+                  <p role={voiceError ? 'alert' : undefined}>{voiceError || (voiceTranscript ? `Heard: ${voiceTranscript}` : isListening ? 'Your spoken answer will appear here as a transcript.' : 'Your microphone starts automatically after SAVIK finishes her question.')}</p>
                 </div>
                 {voiceError && <Button type="button" variant="secondary" size="sm" onClick={resumeMicrophone}>Try microphone again</Button>}
               </div>

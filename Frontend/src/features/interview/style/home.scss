@@ -296,13 +296,6 @@
 .resume-upload-block__heading { display: flex; flex-direction: column; gap: 0.2rem; margin-bottom: 0.5rem; }
 .resume-upload-block__heading strong { color: var(--color-text-secondary); font-size: 0.8rem; }
 .resume-upload-block__heading span { color: var(--color-text-muted); font-size: 0.68rem; }
-.saved-resume-selection { display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.5rem; padding: 0.65rem 0.7rem; border: 1px solid color-mix(in srgb, var(--color-success) 30%, transparent); border-radius: 9px; background: color-mix(in srgb, var(--color-success) 7%, transparent); }
-.saved-resume-selection__check { display: grid; width: 26px; height: 26px; flex: 0 0 auto; place-items: center; border-radius: 8px; background: color-mix(in srgb, var(--color-success) 14%, transparent); color: var(--color-success); font-size: 0.78rem; font-weight: 800; }
-.saved-resume-selection > span:nth-child(2) { display: flex; flex: 1; flex-direction: column; gap: 0.15rem; min-width: 0; }
-.saved-resume-selection small { color: var(--color-text-muted); font-size: 0.62rem; }
-.saved-resume-selection strong { overflow: hidden; color: var(--color-text-primary); font-size: 0.72rem; text-overflow: ellipsis; white-space: nowrap; }
-.saved-resume-selection button { flex: 0 0 auto; padding: 0.3rem 0.45rem; border: 0; border-radius: 6px; background: transparent; color: var(--color-text-muted); font-size: 0.66rem; cursor: pointer; }
-.saved-resume-selection button:hover { background: var(--color-accent-soft); color: var(--color-accent); }
 
 .resume-drop {
   position: relative;

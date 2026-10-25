@@ -2,6 +2,8 @@ import React, { useEffect, useState, useContext } from 'react'
 import { Link } from 'react-router-dom'
 import AppNavbar from '../../../components/AppNavbar'
 import { listResumes, createAtsScore } from '../services/resume.api'
+import { getActiveResumeId, setActiveResumeId } from '../services/activeResume'
+import ResumePicker from '../components/ResumePicker'
 import { ThemeContext } from '../../theme/ThemeContext'
 import { Card, Button, Select, Textarea, PageHeader, Badge } from '../../../components/ui'
 import './resume.scss'
@@ -18,9 +20,10 @@ const AtsScoreChecker = () => {
   const { theme } = useContext(ThemeContext)
   const [resumes, setResumes] = useState([])
   const [resumesLoading, setResumesLoading] = useState(true)
+  const [resumeUploading, setResumeUploading] = useState(false)
   const [resumeListError, setResumeListError] = useState('')
   const [resumeRetry, setResumeRetry] = useState(0)
-  const [selected, setSelected] = useState('')
+  const [selected, setSelected] = useState(getActiveResumeId)
   const [jobDesc, setJobDesc] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
@@ -34,8 +37,12 @@ const AtsScoreChecker = () => {
       try {
         const res = await listResumes()
         if (cancelled) return
-        setResumes(res.resumes || [])
-        if ((res.resumes || []).length) setSelected(res.resumes[0]._id)
+        const availableResumes = res.resumes || []
+        setResumes(availableResumes)
+        const preferred = availableResumes.find((resume) => resume._id === getActiveResumeId())
+        const next = preferred || availableResumes[0]
+        setSelected(next?._id || '')
+        if (next?._id) setActiveResumeId(next._id)
       } catch (error) {
         if (!cancelled) setResumeListError(error?.response?.data?.message || 'We couldn’t load your saved resumes.')
       } finally {
@@ -78,7 +85,7 @@ const AtsScoreChecker = () => {
   return (
     <div className="page-shell">
       <AppNavbar />
-      <main className={`container resume-tool-page ${theme === 'dark' ? 'theme-dark' : ''}`} aria-busy={loading || resumesLoading}>
+      <main className={`container resume-tool-page ${theme === 'dark' ? 'theme-dark' : ''}`} aria-busy={loading || resumesLoading || resumeUploading}>
         <PageHeader
           title="ATS Score Checker"
           subtitle="See where your resume matches the role and what you could improve. Treat this score as guidance, not a hiring prediction."
@@ -93,25 +100,32 @@ const AtsScoreChecker = () => {
               {resumes.length === 0 && !resumesLoading && !resumeListError && (
                 <div className="resume-tool-empty-hint">
                   <strong>Upload a resume to get started</strong>
-                  <span>Your saved PDF resumes will appear here.</span>
-                  <Link to="/resumes">Go to My Resumes <span aria-hidden="true">→</span></Link>
+                  <span>Choose “Upload a new CV” from the selector below.</span>
                 </div>
               )}
-              <Select label="Select Resume" value={selected} disabled={loading || resumesLoading} onChange={(e) => { setSelected(e.target.value); setResult(null) }}>
-                <option value="">-- choose --</option>
-                {resumes.map(r => (
-                  <option key={r._id} value={r._id}>{r.fileName} — {new Date(r.createdAt).toLocaleDateString()}</option>
-                ))}
-              </Select>
+              <ResumePicker
+                label="Select Resume"
+                value={selected}
+                resumes={resumes}
+                disabled={loading || resumesLoading}
+                onUploadingChange={setResumeUploading}
+                placeholder="Choose a CV"
+                helperText="Your active CV is selected by default."
+                onChange={(resumeId) => {
+                  setSelected(resumeId)
+                  setResult(null)
+                }}
+                onResumeUploaded={(resume) => setResumes((current) => [resume, ...current.filter((item) => item._id !== resume._id)])}
+              />
               {selectedResume?.confirmedInterviewAchievements?.length > 0 && (
-                <p className="ats-interview-additions-note">This check includes your {selectedResume.confirmedInterviewAchievements.length} approved Mira interview {selectedResume.confirmedInterviewAchievements.length === 1 ? 'addition' : 'additions'}. Your uploaded PDF is unchanged.</p>
+                <p className="ats-interview-additions-note">This check includes your {selectedResume.confirmedInterviewAchievements.length} approved SAVIK interview {selectedResume.confirmedInterviewAchievements.length === 1 ? 'addition' : 'additions'}. Your uploaded PDF is unchanged.</p>
               )}
 
               <Textarea label="Job Description (optional)" value={jobDesc} disabled={loading} onChange={(e) => { setJobDesc(e.target.value); setResult(null) }} rows={8} placeholder="Paste the role description for a more targeted score..." />
 
               <div className="resume-tool-actions">
-                <Button type="submit" variant="primary" disabled={loading || !selected}>{loading ? 'Checking resume…' : 'Check ATS score'}{loading && <span className="resume-tool-spinner" aria-hidden="true" />}</Button>
-                <Button type="button" variant="secondary" onClick={() => { setJobDesc(''); setResult(null); setError('') }} disabled={loading}>Reset</Button>
+                <Button type="submit" variant="primary" disabled={loading || resumeUploading || !selected}>{resumeUploading ? 'Saving CV…' : loading ? 'Checking resume…' : 'Check ATS score'}{(loading || resumeUploading) && <span className="resume-tool-spinner" aria-hidden="true" />}</Button>
+                <Button type="button" variant="secondary" onClick={() => { setJobDesc(''); setResult(null); setError('') }} disabled={loading || resumeUploading}>Reset</Button>
               </div>
 
               {error && <div className="resume-tool-error" role="alert"><strong>We couldn’t check this resume.</strong><span>{error}</span></div>}

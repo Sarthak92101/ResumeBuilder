@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react'
 import AppNavbar from '../../../components/AppNavbar'
 import { listResumes } from '../../resume/services/resume.api'
+import { getActiveResumeId, setActiveResumeId } from '../../resume/services/activeResume'
 import { getGapAnalysis } from '../services/interview.api'
-import { Card, PageHeader, Button, Select, Textarea, Badge } from '../../../components/ui'
+import { Card, PageHeader, Button, Textarea, Badge } from '../../../components/ui'
+import ResumePicker from '../../resume/components/ResumePicker'
 import { Link } from 'react-router-dom'
 import '../../resume/pages/resume.scss'
 
 const GapAnalysis = () => {
   const [resumes, setResumes] = useState([])
   const [resumesLoading, setResumesLoading] = useState(true)
+  const [resumeUploading, setResumeUploading] = useState(false)
   const [resumeListError, setResumeListError] = useState('')
   const [resumeRetry, setResumeRetry] = useState(0)
-  const [selectedResumeId, setSelectedResumeId] = useState('')
+  const [selectedResumeId, setSelectedResumeId] = useState(getActiveResumeId)
   const [jobDescription, setJobDescription] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
@@ -25,7 +28,12 @@ const GapAnalysis = () => {
       try {
         const res = await listResumes()
         if (cancelled) return
-        setResumes(res.resumes || [])
+        const availableResumes = res.resumes || []
+        setResumes(availableResumes)
+        const preferred = availableResumes.find((resume) => resume._id === getActiveResumeId())
+        const next = preferred || availableResumes[0]
+        setSelectedResumeId(next?._id || '')
+        if (next?._id) setActiveResumeId(next._id)
       } catch (error) {
         if (!cancelled) setResumeListError(error?.response?.data?.message || 'We couldn’t load your saved resumes.')
       } finally {
@@ -58,7 +66,7 @@ const GapAnalysis = () => {
   return (
     <div className='page-shell'>
       <AppNavbar />
-      <main className='container resume-tool-page' aria-busy={loading || resumesLoading}>
+      <main className='container resume-tool-page' aria-busy={loading || resumesLoading || resumeUploading}>
         <PageHeader
           title='Resume-to-JD Gap Analysis'
           subtitle='See which skills are already supported by your resume, which may need clearer evidence, and which may need practice.'
@@ -72,22 +80,29 @@ const GapAnalysis = () => {
             {resumes.length === 0 && !resumesLoading && !resumeListError && (
               <div className='resume-tool-empty-hint'>
                 <strong>Upload a resume to start</strong>
-                <span>Your saved PDFs are used to compare your experience with the job description.</span>
-                <Link to='/resumes'>Go to My Resumes <span aria-hidden='true'>→</span></Link>
+                <span>Choose “Upload a new CV” from the selector below, then compare it with the job description.</span>
               </div>
             )}
-            <Select label='Select Resume (upload first in My Resumes)' value={selectedResumeId} onChange={(e) => setSelectedResumeId(e.target.value)}>
-              <option value=''>-- choose --</option>
-              {resumes.map(r => (
-                <option key={r._id} value={r._id}>{r.fileName} — {new Date(r.createdAt).toLocaleDateString()}</option>
-              ))}
-            </Select>
+            <ResumePicker
+              label='Select Resume'
+              value={selectedResumeId}
+              resumes={resumes}
+              disabled={resumesLoading || loading}
+              onUploadingChange={setResumeUploading}
+              placeholder='Choose a CV'
+              helperText='Your active CV is selected by default.'
+              onChange={(resumeId) => {
+                setSelectedResumeId(resumeId)
+                setResult(null)
+              }}
+              onResumeUploaded={(resume) => setResumes((current) => [resume, ...current.filter((item) => item._id !== resume._id)])}
+            />
 
             <Textarea label='Job Description' value={jobDescription} onChange={(e) => setJobDescription(e.target.value)} rows={10} placeholder='Paste the full job description here...' />
 
             <div className='resume-tool-actions'>
-              <Button type='submit' variant='primary' disabled={loading || resumesLoading}>{loading ? 'Analyzing…' : 'Analyze skill gaps'}{loading && <span className='resume-tool-spinner' aria-hidden='true' />}</Button>
-              <Button type='button' variant='secondary' disabled={loading} onClick={() => { setResult(null); setJobDescription(''); setSelectedResumeId(''); setError(''); }}>Reset</Button>
+              <Button type='submit' variant='primary' disabled={loading || resumesLoading || resumeUploading || !selectedResumeId}>{resumeUploading ? 'Saving CV…' : loading ? 'Analyzing…' : 'Analyze skill gaps'}{(loading || resumeUploading) && <span className='resume-tool-spinner' aria-hidden='true' />}</Button>
+              <Button type='button' variant='secondary' disabled={loading || resumeUploading} onClick={() => { setResult(null); setJobDescription(''); setSelectedResumeId(''); setError(''); }}>Reset</Button>
             </div>
             {error && <div className='resume-tool-error' role='alert'><strong>We couldn’t analyze these skills.</strong><span>{error}</span></div>}
           </form>

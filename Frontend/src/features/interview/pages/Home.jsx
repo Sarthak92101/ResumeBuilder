@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import AppNavbar from '../../../components/AppNavbar'
-import { Badge, Button, Card, Input, Modal, Select, Textarea } from '../../../components/ui'
-import { listResumes } from '../../resume/services/resume.api'
+import { Badge, Button, Card, Input, Modal, Textarea } from '../../../components/ui'
+import { setActiveResumeId } from '../../resume/services/activeResume'
+import { uploadResume } from '../../resume/services/resume.api'
 import GrammarCheck from '../components/GrammarCheck'
 import { useInterview } from '../hooks/useInterview.js'
 import '../style/home.scss'
@@ -26,7 +27,6 @@ const GENERATION_STAGES = [
 
 const Home = () => {
     const { loading, generateReport, reports, fetchGitHubProfile, fetchLeetCodeProfile, fetchCodeforcesProfile } = useInterview()
-    const location = useLocation()
     const [jobDescription, setJobDescription] = useState('')
     const [selfDescription, setSelfDescription] = useState('')
     const [targetCompany, setTargetCompany] = useState('')
@@ -34,11 +34,8 @@ const Home = () => {
     const [language, setLanguage] = useState('en')
     const [error, setError] = useState('')
     const [selectedFileName, setSelectedFileName] = useState('')
-    const [selectedResumeId, setSelectedResumeId] = useState(location.state?.resumeId || '')
-    const [selectedSavedResumeName, setSelectedSavedResumeName] = useState(location.state?.fileName || '')
-    const [savedResumes, setSavedResumes] = useState([])
-    const [resumesLoading, setResumesLoading] = useState(true)
-    const [resumeListError, setResumeListError] = useState('')
+    const [selectedResumeId, setSelectedResumeId] = useState('')
+    const [resumeUploading, setResumeUploading] = useState(false)
     const [githubUsername, setGithubUsername] = useState('')
     const [leetcodeUsername, setLeetcodeUsername] = useState('')
     const [codeforcesHandle, setCodeforcesHandle] = useState('')
@@ -51,29 +48,6 @@ const Home = () => {
     const [generationStage, setGenerationStage] = useState(0)
     const resumeInputRef = useRef(null)
     const navigate = useNavigate()
-
-    useEffect(() => {
-        let cancelled = false
-        const loadSavedResumes = async () => {
-            setResumeListError('')
-            try {
-                const response = await listResumes()
-                if (cancelled) return
-                const resumes = response.resumes || []
-                const preferred = resumes.find((resume) => resume._id === location.state?.resumeId)
-                const next = preferred || resumes[0]
-                setSavedResumes(resumes)
-                setSelectedResumeId(next?._id || '')
-                setSelectedSavedResumeName(next?.fileName || '')
-            } catch (loadError) {
-                if (!cancelled) setResumeListError(loadError.response?.data?.message || 'Saved resumes are unavailable right now. You can still upload a PDF.')
-            } finally {
-                if (!cancelled) setResumesLoading(false)
-            }
-        }
-        loadSavedResumes()
-        return () => { cancelled = true }
-    }, [location.state?.resumeId])
 
     useEffect(() => {
         if (!loading) {
@@ -146,9 +120,11 @@ const Home = () => {
         return () => { cancelled = true; clearTimeout(timer) }
     }, [codeforcesHandle, fetchCodeforcesProfile])
 
-    const handleFileSelect = (event) => {
+    const handleFileSelect = async (event) => {
         const file = event.target.files?.[0]
         if (!file) return
+        setSelectedResumeId('')
+        setSelectedFileName('')
 
         if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
             setError('Please choose a PDF file.')
@@ -165,9 +141,23 @@ const Home = () => {
         }
 
         setSelectedFileName(file.name)
-        setSelectedResumeId('')
-        setSelectedSavedResumeName('')
         setError('')
+
+        setResumeUploading(true)
+        try {
+            const response = await uploadResume(file)
+            const resumeId = response.resume?._id
+            if (!resumeId) throw new Error('The CV could not be saved. Please try uploading it again.')
+            setSelectedResumeId(resumeId)
+            setSelectedFileName(response.resume.fileName || file.name)
+            setActiveResumeId(resumeId)
+        } catch (uploadError) {
+            setSelectedFileName('')
+            event.target.value = ''
+            setError(uploadError.response?.data?.message || uploadError.message || 'Could not upload your CV. Please try again.')
+        } finally {
+            setResumeUploading(false)
+        }
     }
 
     const handleGenerateReport = async () => {
@@ -177,9 +167,8 @@ const Home = () => {
             return
         }
 
-        const resumeFile = resumeInputRef.current?.files?.[0]
-        if (!resumeFile && !selectedResumeId && !selfDescription.trim()) {
-            setError('Upload a resume PDF or add a short introduction to continue.')
+        if (!selectedResumeId) {
+            setError('Upload your CV as a PDF to create an interview plan.')
             return
         }
 
@@ -187,8 +176,7 @@ const Home = () => {
             const report = await generateReport({
                 jobDescription,
                 selfDescription,
-                resumeFile,
-                resumeId: resumeFile ? undefined : selectedResumeId,
+                resumeId: selectedResumeId,
                 targetCompany,
                 interviewDate,
                 language,
@@ -196,7 +184,9 @@ const Home = () => {
                 leetcodeUsername,
                 codeforcesHandle,
             })
-            navigate(`/interview/${report._id}`, { state: { resumeId: resumeFile ? '' : selectedResumeId, fileName: resumeFile ? '' : selectedSavedResumeName } })
+            const activeResumeId = report.resumeId || selectedResumeId
+            if (activeResumeId) setActiveResumeId(activeResumeId)
+            navigate(`/interview/${report._id}`, { state: { resumeId: activeResumeId, fileName: selectedFileName } })
         } catch (err) {
             const message = err.response?.data?.message || err.response?.data?.error || err.message || 'Could not create your interview plan. Please try again.'
             setError(message)
@@ -210,15 +200,15 @@ const Home = () => {
     return (
         <div className='home-page'>
             <AppNavbar />
-            <main className='container home-container' aria-busy={loading}>
+            <main className='container home-container' aria-busy={loading || resumeUploading}>
                 <header className='home-workspace-heading'>
                     <span>YOUR INTERVIEW WORKSPACE</span>
                     <h1>Prepare for your next interview</h1>
-                    <p>Add a job description and choose a CV. SkillMirror will build a focused practice plan around your experience.</p>
+                    <p>Add a job description and upload a CV. SkillMirror will build a focused practice plan around your experience.</p>
                 </header>
 
                 <Card className='plan-builder' id='plan-builder'>
-                    <fieldset className='plan-builder__fields' disabled={loading}>
+                    <fieldset className='plan-builder__fields' disabled={loading || resumeUploading}>
                         <div className='plan-builder__grid'>
                             <section className='plan-builder__section plan-builder__section--job' aria-labelledby='job-section-title'>
                                 <div className='plan-builder__section-heading'>
@@ -245,28 +235,11 @@ const Home = () => {
                                 </div>
 
                                 <div className='resume-upload-block'>
-                                    <div className='resume-upload-block__heading'><strong>Your CV</strong><span>Select a saved CV or upload a new PDF · Up to 5 MB</span></div>
-                                    <Select
-                                        label='Saved CV'
-                                        value={selectedResumeId}
-                                        disabled={resumesLoading || savedResumes.length === 0}
-                                        onChange={(event) => {
-                                            const resumeId = event.target.value
-                                            const selectedResume = savedResumes.find((resume) => resume._id === resumeId)
-                                            setSelectedResumeId(resumeId)
-                                            setSelectedSavedResumeName(selectedResume?.fileName || '')
-                                            setSelectedFileName('')
-                                            if (resumeInputRef.current) resumeInputRef.current.value = ''
-                                        }}
-                                        helperText={resumesLoading ? 'Loading your saved CVs…' : resumeListError || (savedResumes.length ? 'Your most recently uploaded CV is selected by default.' : 'No saved CVs yet. Upload a PDF below.')}
-                                    >
-                                        <option value=''>{savedResumes.length ? 'Choose a saved CV' : 'No saved CVs'}</option>
-                                        {savedResumes.map((resume) => <option key={resume._id} value={resume._id}>{resume.fileName}</option>)}
-                                    </Select>
+                                    <div className='resume-upload-block__heading'><strong>Your CV</strong><span>Upload a PDF for each plan · It becomes your active CV across SAVIK, ATS, and skill gap analysis</span></div>
                                     <label htmlFor='resume' className={`resume-drop${selectedFileName ? ' resume-drop--selected' : ''}`}>
-                                        <input ref={resumeInputRef} type='file' id='resume' name='resume' accept='.pdf,application/pdf' onChange={handleFileSelect} />
+                                        <input ref={resumeInputRef} type='file' id='resume' name='resume' accept='.pdf,application/pdf' aria-required='true' onChange={handleFileSelect} />
                                         <span className='resume-drop__icon' aria-hidden='true'>{selectedFileName ? '✓' : '↑'}</span>
-                                        <span><strong>{selectedFileName || (selectedSavedResumeName ? `Selected: ${selectedSavedResumeName} · choose another` : 'Upload a new PDF')}</strong><small>{selectedFileName ? 'Click to choose a different file' : 'Browse files · PDF only · 5 MB max'}</small></span>
+                                        <span><strong>{selectedFileName || 'Upload your CV PDF'}</strong><small>{resumeUploading ? 'Saving CV to your resume library…' : selectedResumeId ? 'Saved and active across your resume tools' : 'Required for every new plan · PDF only · 5 MB max'}</small></span>
                                     </label>
                                 </div>
 
@@ -308,9 +281,9 @@ const Home = () => {
                         <div className='plan-builder__footer'>
                             {error && <div className='form-alert' role='alert'><strong>We couldn’t create the plan.</strong><span>{error}</span></div>}
                             <div className='plan-builder__submit-copy'><strong>Ready to prepare?</strong><span>Your report includes role-specific questions and a 5-day preparation plan.</span></div>
-                            <Button onClick={handleGenerateReport} disabled={loading} variant='primary' size='lg' className='plan-builder__submit'>
-                                {loading ? 'Creating your plan…' : 'Create interview plan'}
-                                {!loading && <span aria-hidden='true'>→</span>}
+                            <Button onClick={handleGenerateReport} disabled={loading || resumeUploading} variant='primary' size='lg' className='plan-builder__submit'>
+                                {resumeUploading ? 'Saving your CV…' : loading ? 'Creating your plan…' : 'Create interview plan'}
+                                {!loading && !resumeUploading && <span aria-hidden='true'>→</span>}
                             </Button>
                         </div>
                     </fieldset>

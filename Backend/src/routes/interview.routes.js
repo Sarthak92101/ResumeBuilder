@@ -1,5 +1,7 @@
 const express = require("express")
 const authMiddleware = require("../middlewares/auth.middleware")
+const createGeminiUsageLimit = require("../middlewares/geminiUsageLimit.middleware")
+const geminiUsageLimit = createGeminiUsageLimit()
 const interviewController = require("../controllers/interview.controller")
 const upload = require("../middlewares/file.middleware")
 
@@ -24,6 +26,7 @@ const uploadResume = (req, res, next) => {
 interviewRouter.post(
   "/",
   authMiddleware.authUser,
+  geminiUsageLimit,
   uploadResume,
   interviewController.generateInterviewReportController
 )
@@ -31,18 +34,21 @@ interviewRouter.post(
 interviewRouter.post(
   "/ats-score",
   authMiddleware.authUser,
+  geminiUsageLimit,
   interviewController.atsScoreController
 )
 
 interviewRouter.post(
   "/star-check",
   authMiddleware.authUser,
+  geminiUsageLimit,
   interviewController.starCheckController
 )
 
 interviewRouter.post(
   "/report/:interviewId/proof-claims/:claimId/check",
   authMiddleware.authUser,
+  geminiUsageLimit,
   interviewController.checkProofClaimController
 )
 
@@ -74,6 +80,7 @@ interviewRouter.get(
 interviewRouter.post(
   "/voice-feedback",
   authMiddleware.authUser,
+  geminiUsageLimit,
   interviewController.voiceFeedbackController
 )
 
@@ -94,6 +101,7 @@ interviewRouter.post(
 interviewRouter.post(
   "/gap-analysis",
   authMiddleware.authUser,
+  geminiUsageLimit,
   interviewController.gapAnalysisController
 )
 
@@ -101,6 +109,7 @@ interviewRouter.post(
 interviewRouter.post(
   "/next-question",
   authMiddleware.authUser,
+  geminiUsageLimit,
   interviewController.nextQuestionController
 )
 

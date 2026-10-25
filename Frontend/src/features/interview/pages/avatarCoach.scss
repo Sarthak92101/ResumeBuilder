@@ -1,10 +1,11 @@
-.ai-coach-page { width: min(100%, 1120px); }
+main.container.ai-coach-page { width: min(100%, 1200px); padding-top: 1rem; padding-bottom: 1rem; }
+.ai-coach-page .ui-page-header { margin-bottom: 0.9rem !important; padding-top: 0 !important; }
 .ai-coach-back-link { display: inline-flex; align-items: center; gap: 0.45rem; color: var(--color-accent); font-size: 0.78rem; font-weight: 700; text-decoration: none; }
 .ai-coach-back-link:hover { color: var(--color-accent-hover); }
 
-.ai-coach-layout { display: grid; grid-template-columns: minmax(250px, 0.76fr) minmax(0, 1.24fr); align-items: stretch; gap: 1rem; }
-.ai-coach-profile-card { display: flex; flex-direction: column; align-items: stretch; gap: 1rem; min-width: 0; padding: 1.35rem; }
-.ai-coach-avatar { position: relative; display: grid; width: min(100%, 250px); aspect-ratio: 1; place-items: center; align-self: center; margin: 0.4rem auto 0; isolation: isolate; }
+.ai-coach-layout { display: grid; grid-template-columns: minmax(390px, 0.78fr) minmax(0, 1.22fr); align-items: stretch; gap: 0.9rem; }
+.ai-coach-profile-card { display: grid; grid-template-columns: minmax(130px, 0.72fr) minmax(0, 1fr); align-content: start; align-items: center; gap: 0.65rem 0.9rem; min-width: 0; padding: 1rem; }
+.ai-coach-avatar { position: relative; display: grid; grid-column: 1; grid-row: 1 / 4; width: min(100%, 168px); aspect-ratio: 1; place-items: center; align-self: center; margin: 0 auto; isolation: isolate; }
 .ai-coach-avatar__halo { position: absolute; inset: 9%; border: 1px solid color-mix(in srgb, var(--color-accent) 24%, transparent); border-radius: 50%; }
 .ai-coach-avatar__halo--outer { inset: 0; border-style: dashed; animation: ai-coach-orbit 28s linear infinite; }
 .ai-coach-avatar__halo--inner { inset: 5%; border-color: color-mix(in srgb, var(--color-accent-secondary) 38%, transparent); box-shadow: 0 0 34px color-mix(in srgb, var(--color-accent) 14%, transparent); animation: ai-coach-breathe 3.4s ease-in-out infinite; }
@@ -19,47 +20,48 @@
 .ai-coach-avatar__spark--one { top: 15%; right: 5%; font-size: 1rem; animation: ai-coach-float 3.1s ease-in-out infinite; }
 .ai-coach-avatar__spark--two { bottom: 18%; left: 4%; width: 25px; height: 25px; color: var(--color-accent-secondary); font-size: 0.9rem; animation: ai-coach-float 3.1s ease-in-out 0.7s infinite; }
 
-.ai-coach-profile-copy { text-align: center; }
+.ai-coach-profile-copy { grid-column: 2; align-self: end; text-align: left; }
 .ai-coach-eyebrow { color: var(--color-accent); font-size: 0.62rem; font-weight: 800; letter-spacing: 0.14em; }
-.ai-coach-profile-copy h2 { margin: 0.3rem 0 0.2rem; color: var(--color-text-primary); font-size: 1.5rem; letter-spacing: -0.04em; }
-.ai-coach-profile-copy p { max-width: 270px; margin: 0 auto; color: var(--color-text-secondary); font-size: 0.78rem; line-height: 1.55; }
-.ai-coach-status { display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; align-self: center; min-height: 29px; padding: 0.35rem 0.7rem; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-input); color: var(--color-text-secondary); font-size: 0.68rem; font-weight: 650; }
+.ai-coach-profile-copy h2 { margin: 0.2rem 0; color: var(--color-text-primary); font-size: 1.35rem; letter-spacing: -0.04em; }
+.ai-coach-profile-copy p { max-width: 300px; margin: 0; color: var(--color-text-secondary); font-size: 0.72rem; line-height: 1.45; }
+.ai-coach-status { display: inline-flex; grid-column: 2; align-items: center; justify-content: center; gap: 0.45rem; justify-self: start; align-self: start; min-height: 27px; padding: 0.3rem 0.65rem; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-input); color: var(--color-text-secondary); font-size: 0.66rem; font-weight: 650; }
 .ai-coach-status > span { width: 7px; height: 7px; border-radius: 50%; background: var(--color-success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-success) 14%, transparent); }
 .ai-coach-status--thinking > span { background: var(--color-warning); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-warning) 16%, transparent); animation: ai-coach-pulse 1s ease-in-out infinite; }
 .ai-coach-status--speaking > span { background: var(--color-accent-secondary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent-secondary) 16%, transparent); animation: ai-coach-pulse 650ms ease-in-out infinite; }
 .ai-coach-status--listening > span { background: var(--color-success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-success) 18%, transparent); animation: ai-coach-pulse 850ms ease-in-out infinite; }
-.ai-coach-profile-card .ui-field { margin-top: auto; }
-.ai-coach-setup { display: grid; gap: 0.85rem; width: 100%; margin-top: 0.25rem; }
+.ai-coach-profile-card .ui-field { margin-top: 0; }
+.ai-coach-setup { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 0.55rem 0.7rem; width: 100%; margin-top: 0.1rem; }
 .ai-coach-setup .ui-field { min-width: 0; margin-top: 0; }
-.ai-coach-setup > .ui-button { justify-self: start; }
-.ai-coach-load-status { display: flex; align-items: center; gap: 0.55rem; min-height: 44px; color: var(--color-text-secondary); font-size: 0.75rem; }
+.ai-coach-setup > .resume-picker,
+.ai-coach-setup > .ai-coach-load-status,
+.ai-coach-setup > .ai-coach-load-error,
+.ai-coach-setup > .ai-coach-voice-support { grid-column: 1 / -1; }
+.ai-coach-setup > .ui-button { justify-self: start; align-self: center; }
+.ai-coach-setup > .ai-coach-interview-steps { grid-column: 2; align-self: center; }
+.ai-coach-load-status { display: flex; align-items: center; gap: 0.55rem; min-height: 34px; color: var(--color-text-secondary); font-size: 0.72rem; }
 .ai-coach-inline-spinner { display: inline-block; width: 15px; height: 15px; flex: 0 0 auto; border: 2px solid color-mix(in srgb, var(--color-accent) 28%, transparent); border-top-color: var(--color-accent); border-radius: 50%; animation: ai-coach-spin 750ms linear infinite; }
 .ai-coach-inline-spinner--button { width: 13px; height: 13px; margin-left: 0.45rem; border-color: color-mix(in srgb, white 38%, transparent); border-top-color: white; vertical-align: -2px; }
 .ai-coach-load-error { display: grid; gap: 0.6rem; color: var(--color-danger); font-size: 0.74rem; line-height: 1.5; }
 .ai-coach-load-error .ui-button { justify-self: start; }
-.ai-coach-voice-support { padding: 0.75rem; border: 1px solid color-mix(in srgb, var(--color-warning) 30%, var(--color-border)); border-radius: 10px; background: color-mix(in srgb, var(--color-warning) 9%, var(--color-surface)); color: var(--color-text-secondary); font-size: 0.69rem; line-height: 1.5; }
-.ai-coach-no-resume { display: grid; gap: 0.4rem; padding: 0.9rem; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-input); }
-.ai-coach-no-resume strong { color: var(--color-text-primary); font-size: 0.8rem; }
-.ai-coach-no-resume > span { color: var(--color-text-secondary); font-size: 0.71rem; line-height: 1.5; }
-.ai-coach-no-resume a { justify-self: start; margin-top: 0.2rem; color: var(--color-accent); font-size: 0.72rem; font-weight: 750; text-decoration: none; }
-.ai-coach-interview-steps { display: grid; gap: 0.35rem; margin: 0; padding: 0 0 0 1.15rem; color: var(--color-text-secondary); font-size: 0.68rem; line-height: 1.45; }
+.ai-coach-voice-support { padding: 0.55rem 0.65rem; border: 1px solid color-mix(in srgb, var(--color-warning) 30%, var(--color-border)); border-radius: 8px; background: color-mix(in srgb, var(--color-warning) 9%, var(--color-surface)); color: var(--color-text-secondary); font-size: 0.66rem; line-height: 1.4; }
+.ai-coach-interview-steps { display: grid; gap: 0.2rem; margin: 0; padding: 0 0 0 1.05rem; color: var(--color-text-secondary); font-size: 0.62rem; line-height: 1.35; }
 .ai-coach-interview-steps li::marker { color: var(--color-accent); font-weight: 800; }
-.ai-coach-session-info { display: grid; gap: 0.7rem; width: 100%; padding: 0.85rem; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-input); }
+.ai-coach-session-info { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.55rem; width: 100%; padding: 0.65rem; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-input); }
 .ai-coach-session-info > div { display: grid; gap: 0.2rem; min-width: 0; }
 .ai-coach-session-info > div > span { color: var(--color-text-muted); font-size: 0.57rem; font-weight: 800; letter-spacing: 0.11em; }
 .ai-coach-session-info strong { overflow: hidden; color: var(--color-text-primary); font-size: 0.72rem; text-overflow: ellipsis; white-space: nowrap; }
-.ai-coach-session-info .ui-button { justify-self: start; }
-.ai-coach-separation-note { display: flex; align-items: flex-start; gap: 0.55rem; padding: 0.75rem; border: 1px solid color-mix(in srgb, var(--color-accent) 20%, var(--color-border)); border-radius: 10px; background: color-mix(in srgb, var(--color-accent-soft) 48%, var(--color-surface)); }
+.ai-coach-session-info .ui-button { grid-column: 1 / -1; justify-self: start; }
+.ai-coach-separation-note { display: flex; grid-column: 1 / -1; align-items: flex-start; gap: 0.5rem; padding: 0.55rem 0.65rem; border: 1px solid color-mix(in srgb, var(--color-accent) 20%, var(--color-border)); border-radius: 8px; background: color-mix(in srgb, var(--color-accent-soft) 48%, var(--color-surface)); }
 .ai-coach-separation-note > span { color: var(--color-accent); font-size: 0.8rem; }
 .ai-coach-separation-note p { margin: 0; color: var(--color-text-secondary); font-size: 0.67rem; line-height: 1.5; }
 
-.ai-coach-chat-card { display: flex; min-width: 0; min-height: 660px; flex-direction: column; overflow: hidden; padding: 0; }
-.ai-coach-chat-heading { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 1.1rem 1.25rem; border-bottom: 1px solid var(--color-border); }
+.ai-coach-chat-card { display: flex; min-width: 0; min-height: clamp(450px, calc(100vh - 300px), 650px); flex-direction: column; overflow: hidden; padding: 0; }
+.ai-coach-chat-heading { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.85rem 1rem; border-bottom: 1px solid var(--color-border); }
 .ai-coach-chat-heading > div > span { color: var(--color-accent); font-size: 0.6rem; font-weight: 800; letter-spacing: 0.12em; }
 .ai-coach-chat-heading h2 { margin: 0.25rem 0 0; color: var(--color-text-primary); font-size: 1.05rem; letter-spacing: -0.03em; }
 .ai-coach-chat-heading__mode { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.55rem; border-radius: 999px; background: var(--color-accent-soft); color: var(--color-accent); font-size: 0.64rem; font-weight: 750; white-space: nowrap; }
 .ai-coach-chat-heading__mode > span { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-.ai-coach-messages { display: flex; flex: 1; flex-direction: column; gap: 1rem; min-height: 300px; max-height: min(60vh, 620px); overflow: auto; padding: 1.2rem 1.25rem; overscroll-behavior: contain; scroll-behavior: smooth; }
+.ai-coach-messages { display: flex; flex: 1; flex-direction: column; gap: 0.8rem; min-height: 250px; max-height: min(60vh, 620px); overflow: auto; padding: 0.9rem 1rem; overscroll-behavior: contain; scroll-behavior: smooth; }
 .ai-coach-empty-room { display: grid; flex: 1; align-content: center; justify-items: center; gap: 0.55rem; min-height: 260px; padding: 1.5rem; text-align: center; }
 .ai-coach-empty-room > span { display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid color-mix(in srgb, var(--color-accent) 24%, var(--color-border)); border-radius: 14px; background: var(--color-accent-soft); color: var(--color-accent); font-size: 1.1rem; }
 .ai-coach-empty-room strong { color: var(--color-text-primary); font-size: 0.88rem; }
@@ -139,7 +141,6 @@
   .ai-coach-profile-copy h2 { font-size: 1.25rem; }
   .ai-coach-profile-copy p { margin: 0; font-size: 0.7rem; }
   .ai-coach-status { grid-column: 2; justify-self: start; }
-  .ai-coach-profile-card .ui-field,
   .ai-coach-setup,
   .ai-coach-session-info,
   .ai-coach-separation-note { grid-column: 1 / -1; }
@@ -151,6 +152,9 @@
 }
 
 @media (max-width: 420px) {
+  .ai-coach-setup { grid-template-columns: 1fr; }
+  .ai-coach-setup > .ai-coach-interview-steps { grid-column: 1 / -1; }
+  .ai-coach-setup > .ui-button { grid-column: 1 / -1; }
   .ai-coach-profile-card { grid-template-columns: 92px minmax(0, 1fr); gap: 0.6rem; padding: 0.8rem; }
   .ai-coach-avatar { width: 92px; }
   .ai-coach-profile-copy h2 { font-size: 1.1rem; }

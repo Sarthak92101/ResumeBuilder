@@ -160,11 +160,11 @@ export const sendAvatarInterviewTurn = async ({ action, resumeId, targetRole, la
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      const requestError = new Error(errorData.message || 'Mira couldn’t continue the interview. Please try again.')
+      const requestError = new Error(errorData.message || 'SAVIK couldn’t continue the interview. Please try again.')
       requestError.response = { data: errorData }
       throw requestError
     }
-    if (!response.body) throw new Error('This browser could not receive Mira’s live reply.')
+    if (!response.body) throw new Error('This browser could not receive SAVIK’s live reply.')
 
     if (response.headers.get('content-type')?.includes('application/json')) {
       const data = await response.json()
@@ -187,7 +187,7 @@ export const sendAvatarInterviewTurn = async ({ action, resumeId, targetRole, la
       } else if (event.type === 'done') {
         reply = event.reply || reply
       } else if (event.type === 'error') {
-        const streamError = new Error(event.message || 'Mira couldn’t continue the interview. Please try again.')
+        const streamError = new Error(event.message || 'SAVIK couldn’t continue the interview. Please try again.')
         streamError.response = { data: { message: streamError.message } }
         throw streamError
       }

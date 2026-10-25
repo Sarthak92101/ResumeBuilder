@@ -2,6 +2,8 @@ const LEETCODE_GRAPHQL = "https://leetcode.com/graphql"
 const TIMEOUT_MS = 10000
 const MAX_RETRIES = 2
 const TOP_TOPICS = 5
+const createTtlCache = require("../utils/ttlCache")
+const getCachedProfile = createTtlCache()
 
 const PROFILE_QUERY = `
 query userPublicProfile($username: String!) {
@@ -74,6 +76,10 @@ async function fetchLeetCodeSummary(username) {
     throw new Error("LeetCode username is required")
   }
 
+  return getCachedProfile(normalized.toLowerCase(), () => fetchLeetCodeSummaryFresh(normalized))
+}
+
+async function fetchLeetCodeSummaryFresh(normalized) {
   let lastError
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
