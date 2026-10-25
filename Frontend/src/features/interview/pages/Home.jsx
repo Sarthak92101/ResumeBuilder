@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import AppNavbar from '../../../components/AppNavbar'
-import { Badge, Button, Card, Input, Modal, Textarea } from '../../../components/ui'
+import { Badge, Button, Card, Input, Textarea } from '../../../components/ui'
+import LoadingExperience from '../../../components/ui/LoadingExperience.jsx'
 import { setActiveResumeId } from '../../resume/services/activeResume'
 import { uploadResume } from '../../resume/services/resume.api'
 import GrammarCheck from '../components/GrammarCheck'
@@ -10,20 +11,6 @@ import '../style/home.scss'
 import '../style/preview.scss'
 
 const LEETCODE_COLORS = { Easy: '#22c55e', Medium: '#f59e0b', Hard: '#ef4444' }
-const GENERATION_STAGES = [
-    {
-        title: 'Matching your role',
-        description: 'Using the job description and experience you shared.',
-    },
-    {
-        title: 'Creating tailored questions',
-        description: 'Shaping technical and behavioral practice for this role.',
-    },
-    {
-        title: 'Finishing your prep roadmap',
-        description: 'Organizing questions and next steps for focused practice.',
-    },
-]
 
 const Home = () => {
     const { loading, generateReport, reports, fetchGitHubProfile, fetchLeetCodeProfile, fetchCodeforcesProfile } = useInterview()
@@ -45,23 +32,8 @@ const Home = () => {
     const [githubWarning, setGithubWarning] = useState('')
     const [leetcodeWarning, setLeetcodeWarning] = useState('')
     const [codeforcesWarning, setCodeforcesWarning] = useState('')
-    const [generationStage, setGenerationStage] = useState(0)
     const resumeInputRef = useRef(null)
     const navigate = useNavigate()
-
-    useEffect(() => {
-        if (!loading) {
-            setGenerationStage(0)
-            return undefined
-        }
-        if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined
-
-        const timer = window.setInterval(() => {
-            setGenerationStage((current) => Math.min(current + 1, GENERATION_STAGES.length - 1))
-        }, 1800)
-
-        return () => window.clearInterval(timer)
-    }, [loading])
 
     useEffect(() => {
         const username = githubUsername.trim()
@@ -327,36 +299,7 @@ const Home = () => {
 
                 <footer className='home-footer'><span>SkillMirror · Personalized practice for your next interview</span><Link to='/about'>About SkillMirror</Link></footer>
             </main>
-
-            <Modal open={loading} title='Creating your interview plan' className='plan-generation-modal'>
-                <div className='plan-generation' role='status' aria-live='polite' aria-atomic='true'>
-                    <div className='plan-generation__visual' aria-hidden='true'>
-                        <span className='plan-generation__orbit plan-generation__orbit--outer' />
-                        <span className='plan-generation__orbit plan-generation__orbit--inner' />
-                        <div className='plan-generation__document'><i /><i /><i /><b>✓</b></div>
-                    </div>
-                    <div className='plan-generation__copy'>
-                        <span className='plan-generation__eyebrow'>SkillMirror is at work</span>
-                        <strong>{GENERATION_STAGES[generationStage].title}</strong>
-                        <p>{GENERATION_STAGES[generationStage].description}</p>
-                    </div>
-                    <ol className='plan-generation__steps' aria-label='Plan creation stages'>
-                        {GENERATION_STAGES.map((stage, index) => {
-                            const stepState = index < generationStage ? 'complete' : index === generationStage ? 'active' : 'upcoming'
-                            return (
-                                <li key={stage.title} className={`plan-generation__step plan-generation__step--${stepState}`}>
-                                    <span aria-hidden='true'>{stepState === 'complete' ? '✓' : index + 1}</span>
-                                    <span>{stage.title}</span>
-                                </li>
-                            )
-                        })}
-                    </ol>
-                    <div className='plan-generation__note'>
-                        <span className='plan-generation__spinner' aria-hidden='true' />
-                        <span>Your role and experience are being shaped into focused practice.</span>
-                    </div>
-                </div>
-            </Modal>
+            {loading && <LoadingExperience title='Analyzing your resume and preparing your plan' overlay />}
         </div>
     )
 }

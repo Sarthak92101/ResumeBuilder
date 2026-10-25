@@ -4,7 +4,6 @@ const geminiUsageSchema = new mongoose.Schema({
   dailyWindowStart: { type: Date, required: true },
   dailyCount: { type: Number, required: true, default: 0 },
   lastRequestAt: { type: Date, default: null },
-  lastRequestId: { type: String, default: null },
 }, {
   versionKey: false,
 })
