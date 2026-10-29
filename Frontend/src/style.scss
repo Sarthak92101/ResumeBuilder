@@ -73,6 +73,39 @@ select {
   opacity: 0.85;
 }
 
+.ui-password-field {
+  position: relative;
+  width: 100%;
+}
+
+.ui-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.65rem;
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  padding: 0;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 160ms ease, background-color 160ms ease;
+}
+
+.ui-password-toggle:hover {
+  background: var(--color-accent-soft);
+  color: var(--color-text-primary);
+}
+
+.ui-password-toggle:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 .loading-experience {
   display: grid;
   min-height: 100vh;

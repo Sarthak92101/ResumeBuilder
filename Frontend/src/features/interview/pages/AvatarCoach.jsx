@@ -6,6 +6,7 @@ import { listResumes, saveInterviewAchievements } from '../../resume/services/re
 import { getActiveResumeId, setActiveResumeId } from '../../resume/services/activeResume'
 import ResumePicker from '../../resume/components/ResumePicker'
 import { getAvatarResumeInsights, sendAvatarInterviewTurn } from '../services/interview.api'
+import { getPreferredSpeechVoice } from '../speech.js'
 import './avatarCoach.scss'
 
 const SpeechUtterance = typeof window !== 'undefined'
@@ -14,6 +15,7 @@ const SpeechUtterance = typeof window !== 'undefined'
 const SpeechRecognitionConstructor = typeof window !== 'undefined'
   ? window.SpeechRecognition || window.webkitSpeechRecognition
   : null
+const ANSWER_PAUSE_MS = 3000
 
 const AvatarCoach = () => {
   const location = useLocation()
@@ -57,6 +59,8 @@ const AvatarCoach = () => {
   const speechQueueRef = useRef([])
   const idleTimerRef = useRef(null)
   const recognitionRetryRef = useRef(null)
+  const answerEndTimerRef = useRef(null)
+  const answerTranscriptRef = useRef('')
   const speechSupported = typeof window !== 'undefined'
     && Boolean(window.speechSynthesis && SpeechUtterance)
   const microphoneSupported = typeof navigator !== 'undefined'
@@ -99,8 +103,11 @@ const AvatarCoach = () => {
   const clearVoiceTimers = () => {
     window.clearTimeout(idleTimerRef.current)
     window.clearTimeout(recognitionRetryRef.current)
+    window.clearTimeout(answerEndTimerRef.current)
     idleTimerRef.current = null
     recognitionRetryRef.current = null
+    answerEndTimerRef.current = null
+    answerTranscriptRef.current = ''
   }
 
   const getLanguagePrompt = (hinglish, english, hindi) => (
@@ -141,6 +148,17 @@ const AvatarCoach = () => {
     }, delay)
   }
 
+  const finishSpokenAnswer = () => {
+    window.clearTimeout(answerEndTimerRef.current)
+    answerEndTimerRef.current = null
+    const answer = answerTranscriptRef.current.trim()
+    if (!answer || !interviewStartedRef.current) return
+
+    answerTranscriptRef.current = ''
+    window.clearTimeout(idleTimerRef.current)
+    handleRecognizedSpeech(answer)
+  }
+
   const startListening = () => {
     if (!SpeechRecognitionConstructor || !shouldListenRef.current || speakingRef.current || isThinkingRef.current) return
 
@@ -161,7 +179,7 @@ const AvatarCoach = () => {
       return
     }
     recognition.lang = interviewLanguage === 'en' ? 'en-IN' : 'hi-IN'
-    recognition.continuous = false
+    recognition.continuous = true
     recognition.interimResults = true
     recognition.maxAlternatives = 1
 
@@ -171,23 +189,18 @@ const AvatarCoach = () => {
     }
 
     recognition.onresult = (event) => {
-      let finalTranscript = ''
-      let interimTranscript = ''
-      for (let index = event.resultIndex; index < event.results.length; index += 1) {
-        const transcript = event.results[index][0]?.transcript || ''
-        if (event.results[index].isFinal) finalTranscript += transcript
-        else interimTranscript += transcript
-      }
+      const heard = Array.from(event.results)
+        .map((result) => result[0]?.transcript?.trim())
+        .filter(Boolean)
+        .join(' ')
+        .trim()
+      if (!heard) return
 
-      const heard = (finalTranscript || interimTranscript).trim()
-      if (heard) {
-        setVoiceTranscript(heard)
-        armIdlePrompt(true)
-      }
-      if (finalTranscript.trim()) {
-        window.clearTimeout(idleTimerRef.current)
-        handleRecognizedSpeech(finalTranscript.trim())
-      }
+      answerTranscriptRef.current = heard
+      setVoiceTranscript(heard)
+      armIdlePrompt(true)
+      window.clearTimeout(answerEndTimerRef.current)
+      answerEndTimerRef.current = window.setTimeout(finishSpokenAnswer, ANSWER_PAUSE_MS)
     }
 
     recognition.onerror = (event) => {
@@ -201,6 +214,13 @@ const AvatarCoach = () => {
     }
 
     recognition.onend = () => {
+      if (answerTranscriptRef.current.trim()) {
+        if (!answerEndTimerRef.current) {
+          answerEndTimerRef.current = window.setTimeout(finishSpokenAnswer, ANSWER_PAUSE_MS)
+        }
+        return
+      }
+
       updateListening(false)
       if (shouldListenRef.current && !speakingRef.current && !isThinkingRef.current) {
         scheduleRecognitionRetry(350)
@@ -228,8 +248,11 @@ const AvatarCoach = () => {
     const utterance = new SpeechUtterance(text)
     const hindiScript = /[\u0900-\u097F]/.test(text)
     const romanHindi = /\b(?:aap|apka|kya|hai|hain|ho|mujhe|mera|meri|mere|maine|hum|hume|karna|karein|batao|nahi|nahin|kyun|kaise|kahan|kyunki|thoda|bahut|achha|der|skip|sawal)\b/i.test(text)
-    utterance.lang = interviewLanguage === 'hi' || hindiScript || romanHindi ? 'hi-IN' : 'en-IN'
-    utterance.rate = 0.96
+    utterance.lang = interviewLanguage === 'hi' || hindiScript || (interviewLanguage === 'hinglish' && romanHindi) ? 'hi-IN' : 'en-IN'
+    utterance.voice = getPreferredSpeechVoice(utterance.lang) || null
+    utterance.rate = 1.02
+    utterance.pitch = 1
+    utterance.volume = 1
     activeUtteranceRef.current = utterance
     utterance.onend = () => {
       if (activeUtteranceRef.current !== utterance) return
@@ -631,6 +654,7 @@ const AvatarCoach = () => {
     speechQueueRef.current = []
     window.clearTimeout(idleTimerRef.current)
     window.clearTimeout(recognitionRetryRef.current)
+    window.clearTimeout(answerEndTimerRef.current)
     if (recognitionRef.current) {
       try { recognitionRef.current.abort() } catch { /* Recognition may already be stopped. */ }
     }
@@ -868,8 +892,8 @@ const AvatarCoach = () => {
               <div className={`ai-coach-voice-console${isListening ? ' ai-coach-voice-console--listening' : ''}`} role="status" aria-live="polite">
                 <span className="ai-coach-voice-console__mic" aria-hidden="true">{isListening ? '●' : '◉'}</span>
                 <div className="ai-coach-voice-console__copy">
-                  <strong>{isThinking ? 'SAVIK is thinking…' : speakingId ? 'SAVIK is speaking…' : isListening ? 'Listening — speak naturally' : 'SAVIK will listen after speaking'}</strong>
-                  <p role={voiceError ? 'alert' : undefined}>{voiceError || (voiceTranscript ? `Heard: ${voiceTranscript}` : isListening ? 'Your spoken answer will appear here as a transcript.' : 'Your microphone starts automatically after SAVIK finishes her question.')}</p>
+                  <strong>{isThinking ? 'SAVIK is thinking…' : speakingId ? 'SAVIK is speaking…' : isListening ? 'Listening — take your time' : 'SAVIK will listen after speaking'}</strong>
+                  <p role={voiceError ? 'alert' : undefined}>{voiceError || (voiceTranscript ? `Heard: ${voiceTranscript}` : isListening ? 'SAVIK waits for a short pause before replying.' : 'Your microphone starts automatically after SAVIK finishes her question.')}</p>
                 </div>
                 {voiceError && <Button type="button" variant="secondary" size="sm" onClick={resumeMicrophone}>Try microphone again</Button>}
               </div>

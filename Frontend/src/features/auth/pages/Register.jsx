@@ -34,7 +34,7 @@ const Register = () => {
 
         <Input label="Username" type="text" name="username" id="username" placeholder="Choose a username" required autoComplete="username" onChange={(e) => setUsername(e.target.value)} />
         <Input label="Email" type="email" name="email" id="email" placeholder="you@example.com" required autoComplete="email" onChange={(e) => setEmail(e.target.value)} />
-        <Input label="Password" type="password" name="password" id="password" placeholder="Create a strong password" required minLength={6} autoComplete="new-password" onChange={(e) => setPassword(e.target.value)} />
+        <Input label="Password" type="password" name="password" id="password" placeholder="Create a strong password" required minLength={6} autoComplete="new-password" showPasswordToggle onChange={(e) => setPassword(e.target.value)} />
 
         <Button type="submit" variant="primary" size="lg" disabled={loading} style={{ width: '100%' }}>
           {loading ? 'Preparing your account…' : 'Get started'}

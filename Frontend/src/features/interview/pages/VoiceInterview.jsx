@@ -4,6 +4,7 @@ import { getVoiceFeedback } from '../services/interview.api'
 import AppNavbar from '../../../components/AppNavbar'
 import { Button } from '../../../components/ui'
 import LoadingExperience from '../../../components/ui/LoadingExperience.jsx'
+import { getPreferredSpeechVoice } from '../speech.js'
 import '../style/voice.scss'
 
 const FILLER_WORDS = /\b(um|uh|like|you know|so|basically|actually|right)\b/gi
@@ -41,14 +42,19 @@ const VoiceInterview = () => {
 
   const currentQuestion = allQuestions[activeQ]
 
-  const ttsLang = report?.language === 'hi' || report?.language === 'hinglish' ? 'hi-IN' : 'en-US'
+  const ttsLang = report?.language === 'hi' || report?.language === 'hinglish' || /[\u0900-\u097F]/.test(currentQuestion?.question || '')
+    ? 'hi-IN'
+    : 'en-IN'
 
   const speakQuestion = useCallback((question) => {
     if (!speechSupported || !question) return
     window.speechSynthesis.cancel()
     const utterance = new SpeechSynthesisUtterance(question)
     utterance.lang = ttsLang
-    utterance.rate = 1
+    utterance.voice = getPreferredSpeechVoice(ttsLang) || null
+    utterance.rate = 1.02
+    utterance.pitch = 1
+    utterance.volume = 1
     utteranceRef.current = utterance
     window.speechSynthesis.speak(utterance)
   }, [ttsLang, speechSupported])

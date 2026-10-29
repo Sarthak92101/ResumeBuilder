@@ -28,7 +28,7 @@ const Login = () => {
         {error && <div style={{ padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', background: 'rgba(229,72,77,0.08)', color: 'var(--color-danger)', border: '1px solid rgba(229,72,77,0.2)' }}>{error}</div>}
 
         <Input label="Email" type="email" name="email" id="email" placeholder="you@example.com" required autoComplete="email" onChange={(e) => setEmail(e.target.value)} />
-        <Input label="Password" type="password" name="password" id="password" placeholder="Enter your password" required autoComplete="current-password" onChange={(e) => setPassword(e.target.value)} />
+        <Input label="Password" type="password" name="password" id="password" placeholder="Enter your password" required autoComplete="current-password" showPasswordToggle onChange={(e) => setPassword(e.target.value)} />
 
         <Button type="submit" variant="primary" size="lg" disabled={loading} style={{ width: '100%' }}>
           {loading ? 'Connecting to your workspace…' : 'Sign in'}
