@@ -1,6 +1,5 @@
 const resumeModel = require('../models/resume.model')
 const atsModel = require('../models/ats.model')
-const aiService = require('../services/ai.service')
 
 async function createAtsScoreController(req, res) {
   try {
@@ -17,30 +16,8 @@ async function createAtsScoreController(req, res) {
     const resumeText = confirmedAdditions.length
       ? `${baseResumeText}\n\nCandidate-confirmed interview additions (self-reported; not part of uploaded PDF):\n${confirmedAdditions.map((item) => `- ${item}`).join('\n')}`
       : baseResumeText
-    const jobDesc = jobDescription && String(jobDescription).trim().length ? jobDescription : 'General resume assessment: no job description provided.'
-
-    let aiResult
-    let usedFallback = false
-
-    // If Gemini key isn't configured, skip AI and use fallback
-    if (req.geminiLimitReached) {
-      usedFallback = true
-      console.info('Gemini user limit reached — using local ATS fallback')
-      aiResult = computeFallbackAts(resumeText, jobDesc)
-    } else if (!process.env.GOOGLE_API_KEY) {
-      usedFallback = true
-      console.warn('GOOGLE_API_KEY missing — using local ATS fallback')
-      aiResult = computeFallbackAts(resumeText, jobDesc)
-    } else {
-      try {
-        aiResult = await aiService.getDetailedAtsScore({ resumeText, jobDescription: jobDesc })
-      } catch (err) {
-        console.error('AI ATS scoring failed:', err)
-        // fallback to local scorer instead of failing the request
-        usedFallback = true
-        aiResult = computeFallbackAts(resumeText, jobDesc)
-      }
-    }
+    const jobDesc = typeof jobDescription === 'string' ? jobDescription.trim() : ''
+    const aiResult = computeLocalAts(resumeText, jobDesc)
 
     const doc = await atsModel.create({
       resume: resume._id,
@@ -55,7 +32,7 @@ async function createAtsScoreController(req, res) {
       },
       missingKeywords: aiResult.missingKeywords || [],
       suggestions: aiResult.suggestions || [],
-      rawResponse: { _source: usedFallback ? 'fallback' : 'gemini', data: aiResult },
+      rawResponse: { _source: 'local', data: aiResult },
     })
 
     res.status(201).json({ message: 'ATS score created', score: doc })
@@ -80,57 +57,105 @@ async function listAtsScoresController(req, res) {
 
 module.exports = { createAtsScoreController, listAtsScoresController }
 
-function computeFallbackAts(resumeText = '', jobDescription = '') {
-  const resume = String(resumeText || '').toLowerCase()
-  const job = String(jobDescription || '').toLowerCase()
+function computeLocalAts(resumeText = '', jobDescription = '') {
+  const rawResume = String(resumeText || '')
+  const normalize = (value) => String(value || '')
+    .toLowerCase()
+    .replace(/node\.?\s*js/g, ' nodejs ')
+    .replace(/c\+\+/g, ' cplusplus ')
+    .replace(/c#/g, ' csharp ')
+    .replace(/\.net/g, ' dotnet ')
+    .replace(/reactjs/g, ' react ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+  const stopWords = new Set([
+    'about', 'above', 'across', 'after', 'all', 'also', 'an', 'and', 'any', 'are', 'as', 'at',
+    'based', 'be', 'because', 'been', 'before', 'being', 'between', 'both', 'but', 'by', 'can',
+    'candidate', 'company', 'could', 'demonstrated', 'description', 'develop', 'different', 'do',
+    'each', 'either', 'excellent', 'experience', 'for', 'from', 'full', 'have', 'having', 'help',
+    'high', 'ideal', 'in', 'including', 'into', 'is', 'it', 'its', 'job', 'join', 'looking', 'make',
+    'may', 'more', 'most', 'must', 'new', 'not', 'of', 'on', 'one', 'or', 'our', 'own', 'position',
+    'preferred', 'provide', 'required', 'requirement', 'requirements', 'responsibility', 'responsibilities',
+    'role', 'seeking', 'skill', 'strong', 'such', 'team', 'than', 'that', 'the', 'their', 'them',
+    'there', 'these', 'this', 'those', 'to', 'under', 'up', 'us', 'use', 'using', 'various', 'we',
+    'well', 'what', 'when', 'where', 'which', 'while', 'who', 'will', 'with', 'within', 'work',
+    'working', 'year', 'years', 'you', 'your',
+  ])
+  const tokens = (value) => normalize(value).split(/\s+/).filter(Boolean)
+  const resumeTokens = new Set(tokens(rawResume))
+  const jobTokens = tokens(jobDescription)
+  const termCounts = new Map()
+  for (const token of jobTokens) {
+    if (token.length < 3 || stopWords.has(token)) continue
+    termCounts.set(token, (termCounts.get(token) || 0) + 1)
+  }
 
-  const jobWords = job.split(/[^a-z0-9]+/).filter(Boolean)
-  const uniqueJobWords = Array.from(new Set(jobWords))
+  const jobTerms = [...termCounts.keys()].sort((a, b) =>
+    termCounts.get(b) - termCounts.get(a) || b.length - a.length,
+  )
+  const matchedKeywords = jobTerms.filter((term) => resumeTokens.has(term))
+  const missingKeywords = jobTerms.filter((term) => !resumeTokens.has(term))
+  const hasJobDescription = Boolean(String(jobDescription || '').trim())
+  const keywordMatch = hasJobDescription
+    ? Math.round((matchedKeywords.length / Math.max(1, jobTerms.length)) * 100)
+    : 65
 
-  const matched = []
-  const missing = []
+  const normalizedResume = normalize(rawResume)
+  const sectionChecks = [
+    { label: 'summary', present: /\b(summary|profile|objective)\b/.test(normalizedResume) },
+    { label: 'skills', present: /\b(skills|technologies|technical)\b/.test(normalizedResume) },
+    { label: 'experience', present: /\b(experience|employment|internship)\b/.test(normalizedResume) },
+    { label: 'education', present: /\beducation\b/.test(normalizedResume) },
+    { label: 'projects', present: /\bprojects?\b/.test(normalizedResume) },
+    { label: 'certifications', present: /\b(certifications?|licenses?)\b/.test(normalizedResume) },
+    { label: 'contact', present: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i.test(rawResume) || /(?:\+?\d[\d\s().-]{7,}\d)/.test(rawResume) },
+  ]
+  const sectionsFound = sectionChecks.filter((section) => section.present).length
+  const sectionCompleteness = Math.round((sectionsFound / sectionChecks.length) * 100)
+  const lines = rawResume.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+  const veryShortLineRatio = lines.length
+    ? lines.filter((line) => line.length < 4).length / lines.length
+    : 1
+  const formatting = Math.max(0, Math.min(100,
+    72 + Math.min(18, sectionsFound * 3) + (lines.length > 8 ? 5 : 0)
+    - (lines.length < 4 ? 20 : 0) - (veryShortLineRatio > 0.5 ? 10 : 0),
+  ))
 
-  uniqueJobWords.forEach((w) => {
-    if (w.length < 3) return
-    if (resume.includes(w)) matched.push(w)
-    else missing.push(w)
-  })
-
-  // formatting heuristic: penalize PDFs with poor parse (many short lines)
-  const lines = resume.split('\n').map(l => l.trim())
-  const shortLines = lines.filter(l => l.length > 0 && l.length < 40).length
-  const formatting = Math.max(0, 100 - Math.min(80, Math.round((shortLines / Math.max(1, lines.length)) * 100)))
-
-  // achievements heuristic: count numeric occurrences or words like 'achieved', 'increased'
-  const achKeywords = ['achieved','increased','reduced','improved','delivered','launched']
-  const achievements = Math.min(100, (resume.split(/\d+/).length - 1) * 15 + achKeywords.reduce((s,k)=> s + (resume.includes(k)?10:0),0))
-
-  // action verbs heuristic
-  const verbs = ['led','developed','implemented','designed','created','managed','improved','optimized','built']
-  const actionVerbs = Math.min(100, verbs.reduce((s,k)=> s + (resume.includes(k)?12:0),0))
-
-  // section completeness
-  const sections = ['contact','skills','experience','education','project','projects']
-  const foundSections = sections.filter(s => resume.includes(s)).length
-  const sectionCompleteness = Math.round((foundSections / sections.length) * 100)
-
-  const overall = Math.round(( (matched.length ? 30 : 0) + formatting*0.2 + achievements*0.2 + actionVerbs*0.2 + sectionCompleteness*0.2 ))
+  const actionVerbs = [
+    'achieved', 'analyzed', 'automated', 'built', 'created', 'decreased', 'delivered', 'designed',
+    'developed', 'engineered', 'established', 'implemented', 'improved', 'increased', 'launched',
+    'led', 'managed', 'mentored', 'migrated', 'optimized', 'reduced', 'resolved', 'scaled', 'streamlined',
+  ]
+  const actionVerbCount = actionVerbs.filter((verb) => new RegExp(`\\b${verb}\\b`).test(normalizedResume)).length
+  const actionVerbScore = Math.min(100, 15 + actionVerbCount * 9)
+  const measurableResults = rawResume.match(/\b\d+(?:\.\d+)?\s*(?:%|percent|x\b|k\b|m\b|million\b|thousand\b|users?\b|customers?\b|revenue\b|projects?\b|hours?\b|days?\b|weeks?\b)/gi) || []
+  const achievements = Math.min(100, 35 + measurableResults.length * 12 + Math.min(actionVerbCount, 5) * 5)
+  const overallScore = Math.round(
+    keywordMatch * 0.4 + formatting * 0.15 + achievements * 0.15
+    + actionVerbScore * 0.1 + sectionCompleteness * 0.2,
+  )
 
   const suggestions = []
-  if (!resume.includes('contact')) suggestions.push('Add a contact section with email and phone')
-  if (matched.length === 0 && uniqueJobWords.length > 0) suggestions.push('Add keywords from the job description into your skills and experience')
-  if (achievements < 20) suggestions.push('Quantify achievements with metrics and numbers')
+  if (!hasJobDescription) {
+    suggestions.push('Add a job description to see role-specific keyword matching.')
+  } else if (missingKeywords.length) {
+    suggestions.push(`If they reflect your experience, include relevant role terms such as ${missingKeywords.slice(0, 4).join(', ')}.`)
+  }
+  if (!measurableResults.length) suggestions.push('Add measurable outcomes, such as time saved, users reached, or performance improved.')
+  if (actionVerbCount < 3) suggestions.push('Start experience and project bullets with clear action verbs.')
+  const missingSections = sectionChecks.filter((section) => !section.present).map((section) => section.label)
+  if (missingSections.length) suggestions.push(`Consider adding relevant sections: ${missingSections.slice(0, 3).join(', ')}.`)
 
   return {
-    overallScore: Math.min(100, Math.max(0, overall)),
+    overallScore: Math.max(0, Math.min(100, overallScore)),
     breakdown: {
-      keywordMatch: matched.length && uniqueJobWords.length ? Math.round((matched.length/uniqueJobWords.length)*100) : 0,
-      formatting: formatting,
-      achievements: achievements,
-      actionVerbs: actionVerbs,
-      sectionCompleteness: sectionCompleteness,
+      keywordMatch,
+      formatting,
+      achievements,
+      actionVerbs: actionVerbScore,
+      sectionCompleteness,
     },
-    missingKeywords: missing.slice(0, 20),
-    suggestions,
+    missingKeywords: hasJobDescription ? missingKeywords.slice(0, 12) : [],
+    suggestions: suggestions.slice(0, 4),
   }
 }

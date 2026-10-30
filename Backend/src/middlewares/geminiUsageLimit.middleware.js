@@ -16,7 +16,7 @@ async function ensureDailyUsageRecord(userId, dayStart) {
           lastRequestAt: null,
         },
       },
-      { upsert: true, new: true, setDefaultsOnInsert: false },
+      { upsert: true, setDefaultsOnInsert: false },
     )
   } catch (error) {
     // Concurrent first requests can race to insert the same user's row.
@@ -70,7 +70,7 @@ function createGeminiUsageLimit({ allowLocalAtsFallback = false } = {}) {
           $inc: { dailyCount: 1 },
           $set: { lastRequestAt: now },
         },
-        { new: true },
+        { returnDocument: 'after' },
       )
 
       if (usage) {

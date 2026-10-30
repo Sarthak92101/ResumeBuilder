@@ -110,7 +110,7 @@ const GapAnalysis = () => {
 
         {result && (
           <Card className='resume-tool-card gap-results-card'>
-            <div className='gap-results-heading'><div><span>YOUR ROLE MATCH</span><h2>Analysis results</h2></div><span>{(result.gaps || []).length} skills reviewed</span></div>
+            <div className='gap-results-heading'><div><span>YOUR ROLE MATCH</span><h2>Analysis results</h2><Badge tone='neutral'>Quick local analysis</Badge></div><span>{(result.gaps || []).length} skills reviewed</span></div>
             <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', marginBottom: 'var(--space-4)' }}>
               <Badge tone='success'>{(result.gaps || []).filter(g => g.status === 'Have').length} Already Have</Badge>
               <Badge tone='warning'>{(result.gaps || []).filter(g => g.status === 'Add to resume').length} Add to Resume</Badge>

@@ -101,7 +101,6 @@ interviewRouter.post(
 interviewRouter.post(
   "/gap-analysis",
   authMiddleware.authUser,
-  geminiUsageLimit,
   interviewController.gapAnalysisController
 )
 

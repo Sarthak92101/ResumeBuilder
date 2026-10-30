@@ -146,7 +146,7 @@ const AtsScoreChecker = () => {
               <div className="ats-score-content">
                 <div className="ats-result-heading">
                   <div><span>RESUME ANALYSIS</span><h2>Your ATS estimate</h2></div>
-                  <Badge tone="neutral">Guidance</Badge>
+                  <Badge tone="neutral">Quick local estimate</Badge>
                 </div>
 
                 <div className={`ats-score-overview ats-score-overview--${scoreTone}`}>

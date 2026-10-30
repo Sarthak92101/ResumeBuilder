@@ -261,23 +261,27 @@ function extractGeminiTextFromResponse(response) {
   return ""
 }
 
-async function callGemini(prompt, { jsonMode = true, thinkingLevel } = {}) {
+async function callGemini(prompt, { jsonMode = true, thinkingLevel, maxOutputTokens, timeoutMs } = {}) {
   const models = DEFAULT_MODELS.length ? DEFAULT_MODELS : ["gemini-3.8-flash"]
   let lastError
 
   for (const model of models) {
     try {
+      const supportsThinkingLevel = /^(gemini-2\.5|gemini-3\.)/.test(model)
+      const generationConfig = {
+        ...(maxOutputTokens ? { max_output_tokens: maxOutputTokens } : {}),
+        ...(thinkingLevel && supportsThinkingLevel ? { thinking_level: thinkingLevel } : {}),
+      }
+      const requestOptions = timeoutMs ? { timeout: timeoutMs, maxRetries: 0 } : undefined
+
       // Prefer the Interactions API if available on the client
       if (ai.interactions && typeof ai.interactions.create === "function") {
         console.log(`Calling Gemini Interactions API with model: ${model}`)
-        const supportsThinkingLevel = /^(gemini-2\.5|gemini-3\.)/.test(model)
         const response = await ai.interactions.create({
           model,
           input: prompt,
-          ...(thinkingLevel && supportsThinkingLevel
-            ? { generation_config: { thinking_level: thinkingLevel } }
-            : {}),
-        })
+          ...(Object.keys(generationConfig).length ? { generation_config: generationConfig } : {}),
+        }, requestOptions)
 
         const text = extractGeminiTextFromResponse(response)
 
@@ -288,14 +292,16 @@ async function callGemini(prompt, { jsonMode = true, thinkingLevel } = {}) {
 
       // Fallback to older models.generateContent if interactions not available
       console.log(`Calling Gemini models.generateContent with model: ${model}`)
+      const legacyConfig = {
+        ...(jsonMode ? { responseMimeType: "application/json" } : {}),
+        ...(maxOutputTokens ? { maxOutputTokens } : {}),
+        ...(thinkingLevel && supportsThinkingLevel ? { thinkingConfig: { thinkingLevel } } : {}),
+        ...(timeoutMs ? { httpOptions: { timeout: timeoutMs, retryOptions: { attempts: 1 } } } : {}),
+      }
       const response = await ai.models.generateContent({
         model,
         contents: prompt,
-        config: jsonMode
-          ? {
-              responseMimeType: "application/json",
-            }
-          : undefined,
+        config: Object.keys(legacyConfig).length ? legacyConfig : undefined,
       })
 
       const text = extractGeminiTextFromResponse(response)
@@ -671,7 +677,7 @@ async function buildAtsScorePrompt({ resumeText, jobDescription, targetCompany }
     ? `Target company: ${targetCompany}. Include the company-specific match when finding keywords and gaps.`
     : ''
 
-  return `You are an expert resume coach.\n\nRules:\n- Return ONLY one valid JSON object. No markdown, no comments, no trailing commas.\n- Use double quotes for all strings.\n- Keep lists short and focused.\n\nSchema:\n{\n  "matchPercentage": <number 0-100>,\n  "matchedKeywords": [""],\n  "missingKeywords": [""]\n}\n\n${companyContext}\n\nResume Text:\n${truncate(resumeText, MAX_RESUME_CHARS)}\n\nJob Description:\n${truncate(jobDescription, MAX_JOB_CHARS)}`
+  return `You are an expert resume coach.\n\nRules:\n- Return ONLY one valid JSON object. No markdown, no comments, no trailing commas.\n- Use double quotes for all strings.\n- Keep the keyword lists short and focused; return at most 12 missing keywords.\n\nSchema:\n{\n  "matchPercentage": <number 0-100>,\n  "matchedKeywords": [""],\n  "missingKeywords": [""]\n}\n\n${companyContext}\n\nResume Text:\n${truncate(resumeText, MAX_RESUME_CHARS)}\n\nJob Description:\n${truncate(jobDescription, MAX_JOB_CHARS)}`
 }
 
 async function buildDetailedAtsPrompt({ resumeText, jobDescription, targetCompany }) {
@@ -679,7 +685,7 @@ async function buildDetailedAtsPrompt({ resumeText, jobDescription, targetCompan
     ? `Target company: ${targetCompany}. Include the company-specific match when finding keywords and gaps.`
     : ''
 
-  return `You are an expert resume coach.\n\nRules:\n- Return ONLY one valid JSON object. No markdown, no comments, no trailing commas.\n- Use double quotes for all strings.\n\nSchema:\n{\n  "overallScore": <number 0-100>,\n  "breakdown": {\n    "keywordMatch": <number 0-100>,\n    "formatting": <number 0-100>,\n    "achievements": <number 0-100>,\n    "actionVerbs": <number 0-100>,\n    "sectionCompleteness": <number 0-100>\n  },\n  "missingKeywords": [""],\n  "suggestions": [""]\n}\n\n${companyContext}\n\nResume Text:\n${truncate(resumeText, MAX_RESUME_CHARS)}\n\nJob Description:\n${truncate(jobDescription, MAX_JOB_CHARS)}`
+  return `You are an expert resume coach.\n\nRules:\n- Return ONLY one valid JSON object. No markdown, no comments, no trailing commas.\n- Use double quotes for all strings.\n- Return at most 12 missing keywords and 4 concise suggestions.\n- Keep each suggestion to one short sentence.\n\nSchema:\n{\n  "overallScore": <number 0-100>,\n  "breakdown": {\n    "keywordMatch": <number 0-100>,\n    "formatting": <number 0-100>,\n    "achievements": <number 0-100>,\n    "actionVerbs": <number 0-100>,\n    "sectionCompleteness": <number 0-100>\n  },\n  "missingKeywords": [""],\n  "suggestions": [""]\n}\n\n${companyContext}\n\nResume Text:\n${truncate(resumeText, MAX_RESUME_CHARS)}\n\nJob Description:\n${truncate(jobDescription, MAX_JOB_CHARS)}`
 }
 
 async function buildStarCheckPrompt({ questionText, userAnswer }) {
@@ -692,7 +698,7 @@ async function getAtsResumeScore({ resumeText, jobDescription, targetCompany }) 
   }
 
   const prompt = await buildAtsScorePrompt({ resumeText, jobDescription, targetCompany })
-  const text = await callGemini(prompt, { jsonMode: true })
+  const text = await callGemini(prompt, { jsonMode: true, thinkingLevel: "low", maxOutputTokens: 320, timeoutMs: 5000 })
   const parsed = parseJsonSafely(text)
   const validated = atsScoreSchema.safeParse(parsed)
 
@@ -710,7 +716,7 @@ async function getDetailedAtsScore({ resumeText, jobDescription, targetCompany }
   }
 
   const prompt = await buildDetailedAtsPrompt({ resumeText, jobDescription, targetCompany })
-  const text = await callGemini(prompt, { jsonMode: true })
+  const text = await callGemini(prompt, { jsonMode: true, thinkingLevel: "low", maxOutputTokens: 512, timeoutMs: 5000 })
   const parsed = parseJsonSafely(text)
   const validated = detailedAtsSchema.safeParse(parsed)
 

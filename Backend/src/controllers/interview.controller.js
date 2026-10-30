@@ -589,8 +589,8 @@ async function gapAnalysisController(req, res) {
       return res.status(400).json({ message: "resumeText or resumeId with extracted text is required" })
     }
 
-    const { getGapAnalysis } = require("../services/ai.service")
-    const analysis = await getGapAnalysis({ resumeText, jobDescription: jobDescription.trim() })
+    const { analyzeResumeToJobGaps } = require("../services/localResumeAnalysis.service")
+    const analysis = analyzeResumeToJobGaps(resumeText, jobDescription.trim())
 
     res.status(200).json({ message: "Gap analysis generated", analysis })
   } catch (error) {
